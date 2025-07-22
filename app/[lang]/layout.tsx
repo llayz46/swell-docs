@@ -1,3 +1,4 @@
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import '@app/global.css';
 import {RootProvider} from 'fumadocs-ui/provider';
 import {Geist} from 'next/font/google';
@@ -40,6 +41,7 @@ export default async function RootLayout({ params, children }: { params: Promise
                     }}
                 >
                     {children}
+                    <SpeedInsights />
                 </RootProvider>
             </body>
         </html>
