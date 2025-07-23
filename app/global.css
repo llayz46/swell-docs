@@ -2,6 +2,11 @@
 @import 'fumadocs-ui/css/neutral.css';
 @import 'fumadocs-ui/css/preset.css';
 
+@theme inline {
+    --font-sans: 'Geist', sans-serif;
+    --font-mono: 'GeistMono', monospace;
+}
+
 :root {
     --fd-nav-height: 64px !important;
 }

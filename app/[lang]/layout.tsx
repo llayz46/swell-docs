@@ -1,7 +1,7 @@
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import '@app/global.css';
 import {RootProvider} from 'fumadocs-ui/provider';
-import {Geist} from 'next/font/google';
+import {Geist, Geist_Mono} from 'next/font/google';
 import type {ReactNode} from 'react';
 import type { Translations } from 'fumadocs-ui/i18n';
 
@@ -24,6 +24,12 @@ const locales = [
 ];
 
 const geistSans = Geist({
+    variable: "--font-sans",
+    subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+    variable: "--font-mono",
     subsets: ["latin"],
 });
 
@@ -31,7 +37,7 @@ export default async function RootLayout({ params, children }: { params: Promise
     const lang = (await params).lang;
 
     return (
-        <html lang={lang} className={geistSans.className} suppressHydrationWarning>
+        <html lang={lang} className={`${geistSans.variable} ${geistMono.variable} antialiased`} suppressHydrationWarning>
             <body className="flex flex-col min-h-screen">
                 <RootProvider
                     i18n={{
