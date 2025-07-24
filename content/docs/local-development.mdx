@@ -1,0 +1,66 @@
+---
+title: Développement en local
+description: Guide pour exécuter Swell en local
+---
+
+## Exécution de Swell en local
+
+Pour exécuter Swell en local, utiliser la commande suivante :
+
+```bash
+composer run dev
+```
+
+Cette commande regroupe les commandes suivantes :
+
+- `php artisan serve` : Démarre le serveur de développement Laravel.
+- `php artisan queue:listen` : Démarre le gestionnaire de file d'attente pour les tâches en arrière-plan.
+- `npm run dev` : Compile les assets front-end avec Vite.
+- `stripe listen --forward-to http://localhost:8000/api/stripe/webhook` : Écoute les événements Stripe et les redirige vers l'API de Swell.
+
+Pour personnaliser la commande, vous pouvez modifier le script `dev` dans le fichier `composer.json` :
+
+```json title="composer.json"
+{
+    "scripts": {
+        "dev": [
+            "Composer\\Config::disableProcessTimeout",
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen\" \"npm run dev\" \"stripe listen --forward-to http://localhost:8000/stripe/webhook\" --names='server,queue,vite,stripe'"
+        ]
+    }
+}
+```
+
+## Compiler les assets pour la production
+
+Une fois que vous êtes prêt à déployer Swell, commencez par compiler vos assets frontend avec :
+
+```bash tab="npm"
+npm run build
+```
+
+```bash tab="pnpm"
+pnpm run build
+```
+
+```bash tab="yarn"
+yarn build
+```
+
+```bash tab="bun"
+bun run build
+```
+
+## Optimiser Laravel pour la production
+
+Ensuite, optimisez votre application Laravel pour l’environnement de production :
+
+```bash
+php artisan optimize
+```
+
+Cette commande met en cache la configuration, les évènements, les routes, et les vues, ce qui accélère le temps de chargement de l’application.
+
+<Callout title='Production'>
+    Pensez à exécuter cette commande à chaque fois que vous déployez ou modifiez la configuration de production.
+</Callout>

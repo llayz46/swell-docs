@@ -1,7 +1,7 @@
 ---
 title: Installation
 description: Guide d'installation de Swell
-icon: Package
+#icon: Package
 ---
 
 ## Installer Swell
