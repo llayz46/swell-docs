@@ -3,4 +3,194 @@ title: Personnalisation
 description: Comment personnaliser Swell pour vos besoins spécifiques.
 ---
 
-article customisation
+## Personnaliser l'interface de Swell
+
+Swell est livré avec une interface propre, moderne et cohérente, prête à l'emploi. 
+Cependant, le design et la structure restent entièrement modulables. 
+Que ce soit pour adapter l’apparence à votre marque ou ajuster les layouts aux besoins de votre application.
+
+Grâce à une structure claire, des composants réutilisables, un thème CSS configurable et un système de layouts, 
+vous pouvez rapidement faire de Swell un projet à votre image.
+
+## Modifier le logo
+
+Pour changer le logo de Swell, il y a deux fichiers à modifier :
+
+```tsx title="resources/js/components/app-logo.tsx"
+import AppLogoIcon from './app-logo-icon';
+
+export default function AppLogo() {
+    return (
+        <>
+            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
+            </div>
+            <div className="ml-1 grid flex-1 text-left text-sm">
+                <span className="mb-0.5 truncate leading-tight font-semibold capitalize">Swell</span>
+            </div>
+        </>
+    );
+}
+```
+
+```tsx title="resources/js/components/app-logo-icon.tsx"
+import { SVGAttributes } from 'react';
+
+export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
+    return (
+        <svg {...props} viewBox="0 0 32 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7.56904 35.889L27.3808 19.5641L32 15.7579L31.9886 0L0 26.3577L7.56904 35.889Z"/>
+            <path d="M14.6136 44.7606L23.7235 37.2539L27.3808 34.2402V19.5641L7.56904 35.889L14.6136 44.7606Z" fillOpacity="0.8"/>
+            <path d="M20.3644 52L23.7235 49.2318V37.2539L14.6136 44.7606L20.3644 52Z" fillOpacity="0.6"/>
+        </svg>
+    );
+}
+```
+
+- `AppLogo.tsx` : Contient la version complète du logo, composée de l’icône et du nom de votre projet.
+- `AppLogoIcon.tsx` : Contient uniquement l’icône <span className='text-fd-muted-foreground text-sm'>(svg)</span> du logo.
+
+<Callout>
+    Ces deux fichiers préfixés par `App`, sont utilisés pour afficher le logo dans les pages authentifiées de l'application.
+</Callout>
+
+## Modifier le thème
+
+Swell utilise Tailwind et Shadcn UI pour offrir une interface soignée. 
+Le système de thème intégré permet de modifier rapidement l’apparence globale, que ce soit pour le mode clair ou sombre.
+
+Pour modifier les couleurs par défaut ou adapter le thème à votre projet, rendez-vous dans le fichier `resources/css/app.css`.
+Ce fichier contient la définition des variables CSS principales :
+
+- `:root` : Contient les variables CSS pour le mode clair.
+- `.dark` : Contient les variables CSS pour le mode sombre.
+
+C’est ici que vous pouvez personnaliser les couleurs, les border-radius, les spacing, etc.
+
+<span className='text-fd-muted-foreground text-sm'>
+    *Ces variables sont utilisées à travers tous les composants de l'application pour garantir une cohérence visuelle.*
+</span>
+
+<Callout>
+    Vous pouvez aller plus loin en consultant :
+    - La documentation [Tailwind CSS](https://tailwindcss.com/docs/theme) sur les thèmes pour comprendre comment fonctionne la personnalisation via Tailwind.
+    - La documentation [Shadcn UI](https://ui.shadcn.com/docs/theming) pour adapter facilement vos composants au style de votre marque.
+</Callout>
+
+## Modifier les layouts
+
+Swell repose sur un système de **layouts** permettant de structurer l'affichage et de personnaliser facilement 
+l'apparence des différentes pages de l’application : pages publiques, dashboard, pages d’authentification, etc.
+
+Chaque layout est un composant React/TSX situé dans `resources/js/layouts`. Ils définissent la structure globale 
+des pages (header, sidebar, container) et peuvent être modifiés ou remplacés selon vos besoins.
+
+Voici un aperçu de l'organisation des layouts :
+
+<Files>
+  <Folder name="resources" defaultOpen>
+    <Folder name="js" defaultOpen>
+      <Folder name="layouts" defaultOpen>
+        <Folder name="app">
+          <File name="app-header-layout.tsx" />
+          <File name="app-sidebar-layout.tsx" />
+        </Folder>
+        <Folder name="auth">
+          <File name="auth-card-layout.tsx" />
+          <File name="auth-simple-layout.tsx" />
+          <File name="auth-split-layout.tsx" />
+        </Folder>
+        <Folder name="settings">
+          <File name="layout.tsx" />
+        </Folder>
+        <File name="admin-layout.tsx" />
+        <File name="app-layout.tsx" />
+        <File name="auth-layout.tsx" />
+        <File name="base-layout.tsx" />
+      </Folder>
+    </Folder>
+  </Folder>
+</Files>
+
+### Utiliser un layout
+
+Pour utiliser un layout dans une page, englober le contenu de la page dans le layout souhaité.
+
+```tsx title="login.tsx"
+import { Head } from '@inertiajs/react';
+import AuthLayout from '@/layouts/auth-layout';
+
+export default function Login() {
+    return (
+        <AuthLayout title="Connexion" description="Connexion à votre compte">
+            <Head title="Connexion" />
+            <div className="flex flex-col items-center justify-center h-screen">
+                <h1 className="text-2xl font-bold">Connexion</h1>
+            </div>
+        </AuthLayout>
+    )
+}
+```
+<Callout>
+    Swell utilise différents layouts selon les types de pages (authentification, administration, etc.) 
+    pour garder une structure claire et réutilisable.
+</Callout>
+
+### Créer un layout
+
+Créer un layout personnalisé permet d’adapter l’interface à des besoins spécifiques
+<span className='text-fd-muted-foreground text-sm'>(ex : mise en page avec sidebar, mise en page card, etc.)</span>.
+
+Pour créer un layout :
+
+1. Créez un fichier dans le dossier `resources/js/layouts` ou dans un sous-dossier (ex. `auth`, `app`, `settings`).
+2. Exportez une fonction React qui reçoit `children` (et éventuellement d'autres props comme `title`, `description` ou `breadcrumbs`).
+3. Intégrez la structure souhaitée : header, sidebar, container, etc.
+
+```tsx title="resources/js/layouts/custom-layout.tsx"
+import { ReactNode } from 'react';
+
+type Props = {
+    children: ReactNode;
+    title?: string;
+};
+
+export default function CustomLayout({ children, title }: Props) {
+    return (
+        <div className="min-h-screen bg-muted text-foreground">
+            <header className="p-4 bg-background border-b">
+                <h1 className="text-xl font-semibold">{title ?? 'Page personnalisée'}</h1>
+            </header>
+            <main className="p-6">{children}</main>
+        </div>
+    );
+}
+```
+
+Une fois votre layout créé, vous pouvez l’importer et l’utiliser comme vu dans la section précédente.
+
+<Callout>
+    N’hésitez pas à vous inspirer des layouts existants *(auth-layout.tsx, app-sidebar-layout.tsx, etc.)* 
+    pour comprendre leur structure et conserver une organisation claire et cohérente dans votre projet.
+
+    Vous pouvez également les réutiliser ou les adapter selon les besoins spécifiques de vos interfaces.
+</Callout>
+
+## Modifier des composants
+
+Swell embarque une grande variété de composants réutilisables situés dans le dossier `resources/js/components`. 
+Ces composants couvrent des besoins fréquents de l’interface comme :
+
+- `pagination-component.tsx`
+
+- `confirm-delete-dialog.tsx`
+
+- `toaster-wrapper.tsx`
+
+- `product-card.tsx`
+
+Ces composants peuvent être librement modifiés ou étendus pour répondre aux besoins de votre projet.
+
+<Callout>
+    L’objectif de Swell est de fournir une base solide mais flexible. Chaque composant est conçu pour être facilement compréhensible, réutilisable, et personnalisable.
+</Callout>
