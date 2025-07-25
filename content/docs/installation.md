@@ -5,4 +5,3 @@ description: Guide d'installation de Swell
 ---
 
 ## Installer Swell
-
