@@ -1,0 +1,78 @@
+---
+title: Actions et Modules
+description: Organisation du code métier et fonctionnalités modulaires dans Swell.
+---
+
+## Actions et Modules
+
+Swell adopte une approche souple pour organiser la logique métier et les fonctionnalités optionnelles.
+Deux concepts complémentaires sont proposés : les **Actions** et les **Modules**.
+
+
+### Actions
+
+Les **Actions** constituent un pattern central dans Swell pour organiser votre logique métier. 
+Elles permettent d’isoler des opérations précises 
+<span className='text-fd-muted-foreground text-sm'>(création, mise à jour, suppression, traitements spécifiques)</span>
+dans des classes dédiées situées dans `app/Actions/`.
+
+Cette approche facilite la réutilisation, les tests unitaires, et garde vos contrôleurs légers 
+et centrés sur la gestion des requêtes. Vous êtes libres d’adapter cette organisation selon vos préférences, 
+Swell n’impose aucune contrainte.
+
+Par exemple, vous pouvez organiser vos actions autour d’une fonctionnalité :
+
+```php title="handleAddProductToCart.php"
+class HandleAddProductToCart
+{
+    public function __invoke($productId, $quantity = 1, $cart = null)
+    {
+        $product = Product::findOrFail($productId);
+    
+        if ($product->isOutOfStock()) {
+            throw new \Exception('Produit en rupture de stock.');
+        }
+    
+        ($cart ?: CartFactory::make())->items()->firstOrCreate([
+            'product_id' => $productId,
+        ], [
+            'quantity' => 0,
+        ])->increment('quantity', $quantity);
+    
+        CartCache::forget();
+    }
+}
+```
+
+Ou encore centraliser plusieurs fonctionnalités dans une seule classe Action :
+
+```php title="handleProductCart.php"
+class HandleProductCart
+{
+    public function add($productId, $quantity = 1, $cart = null)
+    {
+        // Logic to add
+    }
+
+    public function remove($productId, $cart = null)
+    {
+        // Logic to remove
+    }
+}
+```
+
+<Callout>
+    Swell n'impose aucun style : vous êtes libres d’adopter la structure qui correspond le mieux à votre projet ou à votre équipe.
+</Callout>
+
+### Modules 
+
+Les modules correspondent aux parties de l’application que vous pouvez activer, modifier ou retirer selon vos besoins. 
+Ils regroupent des fonctionnalités indépendantes et optionnelles que **Swell** vous permet de publier 
+via des commandes artisan <span className='text-fd-muted-foreground text-sm'>(config, vues, assets…)</span>.
+
+Cette logique favorise une approche modulaire du projet, tout en vous laissant la liberté de personnaliser chaque module à votre guise.
+
+<Callout>
+    Pour plus d’informations sur la publication des modules, consultez la section [Concepts clés](/add-functionnality).
+</Callout>

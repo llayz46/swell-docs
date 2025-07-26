@@ -1,11 +1,14 @@
 {
-    "title": "Name of Folder",
+    "title": "Root",
     "pages": [
         "---Introduction---",
         "index",
         "installation",
         "local-development",
         "customisation",
-        "technologies"
+        "technologies",
+        "---Structure---",
+        "architecture",
+        "actions-modules"
     ]
 }
