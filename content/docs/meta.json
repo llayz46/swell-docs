@@ -9,6 +9,7 @@
         "technologies",
         "---Structure---",
         "architecture",
-        "actions-modules"
+        "actions-modules",
+        "models"
     ]
 }
