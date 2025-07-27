@@ -10,11 +10,11 @@ Cependant, le design et la structure restent entièrement modulables.
 Que ce soit pour adapter l’apparence à votre marque ou ajuster les layouts aux besoins de votre application.
 
 Grâce à une structure claire, des composants réutilisables, un thème CSS configurable et un système de layouts, 
-vous pouvez rapidement faire de Swell un projet à votre image.
+vous pouvez rapidement faire de **Swell** un projet à votre image.
 
 ## Modifier le logo
 
-Pour changer le logo de Swell, il y a deux fichiers à modifier :
+Pour changer le logo de **Swell**, il y a deux fichiers à modifier :
 
 ```tsx title="resources/js/components/app-logo.tsx"
 import AppLogoIcon from './app-logo-icon';
@@ -56,7 +56,7 @@ export default function AppLogoIcon(props: SVGAttributes<SVGElement>) {
 
 ## Modifier le thème
 
-Swell utilise Tailwind et Shadcn UI pour offrir une interface soignée. 
+**Swell** utilise Tailwind et Shadcn UI pour offrir une interface soignée. 
 Le système de thème intégré permet de modifier rapidement l’apparence globale, que ce soit pour le mode clair ou sombre.
 
 Pour modifier les couleurs par défaut ou adapter le thème à votre projet, rendez-vous dans le fichier `resources/css/app.css`.
@@ -79,7 +79,7 @@ C’est ici que vous pouvez personnaliser les couleurs, les border-radius, les s
 
 ## Modifier les layouts
 
-Swell repose sur un système de **layouts** permettant de structurer l'affichage et de personnaliser facilement 
+**Swell** repose sur un système de **layouts** permettant de structurer l'affichage et de personnaliser facilement 
 l'apparence des différentes pages de l’application : pages publiques, dashboard, pages d’authentification, etc.
 
 Chaque layout est un composant React/TSX situé dans `resources/js/layouts`. Ils définissent la structure globale 
@@ -174,11 +174,13 @@ Une fois votre layout créé, vous pouvez l’importer et l’utiliser comme vu 
     pour comprendre leur structure et conserver une organisation claire et cohérente dans votre projet.
 
     Vous pouvez également les réutiliser ou les adapter selon les besoins spécifiques de vos interfaces.
+
+    Pour plus d'info, voir la documentation [Laravel](https://laravel.com/docs/12.x/starter-kits#starter-kit-customization).
 </Callout>
 
 ## Modifier des composants
 
-Swell embarque une grande variété de composants réutilisables situés dans le dossier `resources/js/components`. 
+**Swell** embarque une grande variété de composants réutilisables situés dans le dossier `resources/js/components`. 
 Ces composants couvrent des besoins fréquents de l’interface comme :
 
 - `pagination-component.tsx`
