@@ -10,6 +10,9 @@
         "---Structure---",
         "architecture",
         "actions-modules",
-        "models"
+        "models",
+        "---Commandes---",
+        "enable-feature",
+        "make-user"
     ]
 }
