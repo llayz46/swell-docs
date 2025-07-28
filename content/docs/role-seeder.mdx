@@ -1,0 +1,40 @@
+---
+title: Ajouter les rôles
+description: Initialiser les rôles de base dans la base de données avec le RoleSeeder.
+---
+
+## Initialiser les rôles avec le RoleSeeder
+
+Le `RoleSeeder` permet d’ajouter automatiquement les rôles essentiels à la base de données lors de l’installation ou du développement de l’application.
+
+**Swell** s’appuie sur le package [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) pour la gestion des rôles et permissions. Ce package robuste facilite la création, l’attribution et la gestion des rôles dans Laravel.
+
+### Pourquoi utiliser un seeder de rôles ?
+
+- **Gain de temps** : plus besoin de créer manuellement les rôles à chaque nouvelle installation.
+- **Cohérence** : tous les environnements disposent des mêmes rôles de base.
+- **Automatisation** : facilite les déploiements et les tests.
+
+<Callout>
+    Utilise le RoleSeeder pour t’assurer que les rôles comme `admin`, `customer` ou `visitor` existent toujours dans la base de données. Ces rôles sont créés via le package spatie/laravel-permission.
+</Callout>
+
+### Exemple d’exécution
+
+Pour initialiser les rôles de base, il suffit d’exécuter la commande suivante :
+
+```bash
+php artisan db:seed --class=RoleSeeder
+```
+
+Après exécution, les rôles suivants seront créés :
+
+- `admin` : accès complet aux pages Admin.
+- `customer` : regroupe les utilisateurs ayant passé commande.
+- `visitor` : utilisateur de base, n'ayant pas encore passé commande.
+
+<Callout title="Bon à savoir">
+    Adapter le contenu du RoleSeeder selon les besoins spécifiques de ton application.
+
+    Pour plus d'info sur la gestion des permissions, voir la documentation de [spatie/laravel-permission](https://spatie.be/docs/laravel-permission)
+</Callout>

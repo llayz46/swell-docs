@@ -11,8 +11,9 @@
         "architecture",
         "actions-modules",
         "models",
-        "---Commandes---",
-        "enable-feature",
-        "make-user"
+        "---Commandes & Outils---",
+        "modules-management",
+        "make-user",
+        "role-seeder"
     ]
 }
