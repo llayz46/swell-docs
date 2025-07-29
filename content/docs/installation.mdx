@@ -4,3 +4,93 @@ description: Guide d'installation de Swell
 ---
 
 ## Installer Swell
+
+Vous pouvez installer **Swell** de deux manières : soit avec l’outil Laravel Installer, soit directement via Composer.
+
+```bash title="Laravel Installer"
+laravel new nom-du-projet --using=swell/starter-kit
+```
+
+```bash title="Composer"
+composer create-project swell/starter-kit nom-du-projet
+```
+
+Ces commandes vont :
+- Télécharger la dernière version de Laravel
+- Installer le starter-kit Swell et ses dépendances
+- Préconfigurer le projet pour un usage e-commerce moderne
+
+## Configuration de l’environnement
+
+1. Copiez le fichier d’exemple d’environnement :
+   ```bash
+   cp .env.example .env
+   ```
+2. Générez la clé d’application :
+   ```bash
+   php artisan key:generate
+   ```
+3. Configurez la connexion à votre base de données dans `.env`.
+    <Callout>
+       Pour toute question concernant la configuration de services comme Algolia ou Stripe, référez-vous à la documentation officielle de [Laravel](https://laravel.com/docs).
+   </Callout>
+
+## Installer les dépendances front-end
+
+```bash tab="npm"
+npm install
+```
+
+```bash tab="pnpm"
+pnpm install
+```
+
+```bash tab="yarn"
+yarn install
+```
+
+```bash tab="bun"
+bun install
+```
+
+## Initialiser la base de données
+
+Lancez les migrations et seeders de base
+pour l'environnement de développement avec des données de test :
+
+```bash
+php artisan migrate --seed --seeder=LocalSeeder
+```
+
+## Lancer le projet en local
+
+Pour démarrer le serveur de développement :
+
+```bash
+composer run dev
+```
+
+Cette commande lance :
+- Le serveur Laravel
+- Le watcher Vite pour le front-end
+- Le listener de queue
+- L’écoute des webhooks Stripe (si configuré)
+
+Accédez ensuite à [http://localhost:8000](http://localhost:8000).
+
+## Se connecter à l’application
+
+Après l’installation, le LocalSeeder créera automatiquement un utilisateur administrateur.  
+Les identifiants par défaut sont :
+
+- **Email** : john@doe.com
+- **Mot de passe** : password
+
+<Callout>
+    Vous pouvez modifier les informations du compte directement dans le `LocalSeeder`. Voir la documentation sur les [seeders](/seeders).
+</Callout>
+
+## Aller plus loin
+
+- Consultez la documentation Swell pour la personnalisation, la gestion des modules, etc.
+- Pour plus d’options d’installation, voir la documentation de Laravel : [https://laravel.com/docs/installation](https://laravel.com/docs/installation)
