@@ -28,10 +28,11 @@ Le `RoleSeeder` permet d’ajouter automatiquement les rôles essentiels à la b
 
 Pour initialiser les rôles de base, il suffit d’exécuter la commande suivante :
 
-```bash
+```bash tab="Seeder"
 php artisan db:seed --class=RoleSeeder
+```
 
-# Pour repartir d’une base de données vierge :
+```bash tab="Fresh"
 php artisan migrate:fresh --seed --seeder=RoleSeeder
 ```
 
@@ -53,10 +54,11 @@ Le `LocalSeeder` est conçu pour faciliter le développement local en injectant 
 
 ### Exemple d’exécution
 
-```bash
+```bash tab="Seeder"
 php artisan db:seed --class=LocalSeeder
+```
 
-# Pour repartir d’une base de données vierge :
+```bash tab="Fresh"
 php artisan migrate:fresh --seed --seeder=LocalSeeder
 ```
 
@@ -72,10 +74,11 @@ Le `LocalProductSeeder` permet de générer rapidement un catalogue de produits 
 
 ### Exemple d’exécution
 
-```bash
+```bash tab="Seeder"
 php artisan db:seed --class=LocalProductSeeder
+```
 
-# Pour repartir d’une base de données vierge :
+```bash tab="Fresh"
 php artisan migrate:fresh --seed --seeder=LocalProductSeeder
 ```
 

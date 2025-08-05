@@ -1,0 +1,104 @@
+---
+title: Ajouter une fonctionnalité
+description: Comment ajouter une nouvelle fonctionnalité dans Swell, bonnes pratiques et architecture recommandée.
+---
+
+## Ajouter une nouvelle fonctionnalité à Swell
+
+Voici quelques suggestions pour ajouter une fonctionnalité dans **Swell** : l’approche modulaire et 
+pragmatique inspirée des standards Laravel et des bonnes pratiques du starter-kit est recommandée, 
+mais il est possible de choisir l’implémentation la plus adaptée au projet.
+
+## Bonnes pratiques générales
+
+- **Modularité** : Isoler chaque nouvelle fonctionnalité dans son propre module ou dossier.
+- **Convention** : Respecter la structure existante (Actions, Models, Controllers, Tests…).
+- **Lisibilité** : Privilégier un code clair, documenté et typé.
+- **Tests** : Ajouter des tests unitaires et fonctionnels pour garantir la stabilité.
+- **Reutilisabilité** : Utiliser les helpers, traits et services partagés de Swell.
+
+## Approche recommandée
+
+1. **Créer les modèles et migrations**  
+   Utiliser `php artisan make:model Nom -m` pour générer le modèle et la migration associée.  
+   Il s'agit d'un projet Laravel classique : il est donc possible d'utiliser la structure standard (`app/Models/`, `database/migrations/`) ou d'organiser les fonctionnalités dans le dossier `Modules/` si besoin.
+
+2. **Développer les actions**  
+   Placer la logique métier dans des classes d’actions (`app/Actions/`).  
+   Exemple : `AddToWishlistAction`, `ApplyCouponAction`.  
+
+   <Callout>
+        La structure suit celle d’un projet Laravel classique : voir la page [architecture](/architecture) pour plus de détails.  
+        (Voir aussi la page [actions-modules](/actions-modules) pour approfondir.)
+   </Callout>
+
+3. **Mettre à jour les contrôleurs**  
+   Ajouter ou adapter les controllers.
+
+4. **Adapter le front-end**  
+   Si besoin, créer ou modifier les composants React dans `resources/js/`.  
+   Il est recommandé d’utiliser les composants existants comme référence afin d’éviter la duplication de code.
+   <span className='text-fd-muted-foreground text-sm'>Voir la page [personnalisation](/customisation) pour plus de détails.</span>
+
+5. **Écrire les tests**  
+   Ajouter des tests dans `tests/Feature` et `tests/Unit` pour couvrir la nouvelle logique et garantir la stabilité de la fonctionnalité.
+
+### Exemple : Ajouter une fonctionnalité "Favoris" (Wishlist)
+
+#### 1. Générer le modèle et la migration
+
+```bash
+php artisan make:model Wishlist -m
+```
+
+Dans la migration, définir les champs nécessaires (user_id, product_id…).
+
+#### 2. Créer l’action métier
+
+Dans `app/Actions/Wishlist/AddToWishlistAction.php` :
+
+```php
+namespace App\Actions\Wishlist;
+
+use App\Models\Wishlist;
+
+class AddToWishlistAction
+{
+    public function execute($user, $product)
+    {
+        return Wishlist::firstOrCreate([
+            'user_id' => $user->id,
+            'product_id' => $product->id,
+        ]);
+    }
+}
+```
+
+#### 3. Mettre à jour le contrôleur
+
+Dans `app/Http/Controllers/WishlistController.php` :
+
+```php
+public function store(Request $request)
+{
+    $action = new AddToWishlistAction();
+    $action->execute($request->user(), $request->product);
+    return response()->json(['success' => true]);
+}
+```
+
+#### 4. Adapter le front-end
+
+Créer un composant pour lister les favoris.
+
+#### 5. Tester
+
+Ajouter des tests dans `tests/Feature/WishlistTest.php`.
+
+<Callout>
+    Pour des fonctionnalités plus complexes, il est conseillé de s'inspirer des modules existants (ex : Panier, Commentaires).
+</Callout>
+
+<span className='text-fd-muted-foreground text-sm'>
+    En suivant cette approche, la cohérence, la maintenabilité et l’évolutivité du projet Swell sont assurées.
+</span>
