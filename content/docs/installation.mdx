@@ -59,7 +59,17 @@ Lancez les migrations et seeders de base
 pour l'environnement de développement avec des données de test :
 
 ```bash
-php artisan migrate --seed --seeder=LocalSeeder
+php artisan migrate
+
+php artisan db:seed --class=RoleSeeder
+
+php artisan db:seed --class=LocalSeeder
+```
+
+Ou bien, si vous souhaitez, vous pouvez utiliser la commande suivante :
+
+```bash
+php artisan swell:install
 ```
 
 ## Lancer le projet en local
