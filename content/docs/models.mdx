@@ -72,25 +72,25 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 | `meta_description`  | `string` `max:255` `nullable`       |
 | `meta_keywords`     | `string` `max:255` `nullable`       |
 | `brand_id`          | `integer` `restrictOnDelete`        |
-| `product_group_id`  | `integer` `nullable` `nullOnDelete` |
+| `collection_id`  | `integer` `nullable` `nullOnDelete` |
 
 <span className="text-fd-muted-foreground text-sm">BelongsToMany(Category).</span> <br />
 <span className="text-fd-muted-foreground text-sm">BelongsTo(Brand).</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(ProductImage).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(ProductGroup).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Collection).</span> <br />
 <span className="text-fd-muted-foreground text-sm">BelongsToMany(Wishlist).</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(Comment).</span>
 
-### ProductGroup
+### Collection
 
 | Champ  | Type              |
 | ------ | ----------------- |
-| `name` | `string`          |
+| `title` | `string`          |
 | `slug` | `string` `unique` |
 
 <span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
 
-<Callout>ProductGroup permet d’associer plusieurs produits entre eux au sein d’un même groupe.</Callout>
+<Callout>Collection permet d’associer plusieurs produits entre eux au sein d’une même collection.</Callout>
 
 ### ProductImage
 
