@@ -1,0 +1,73 @@
+---
+title: Custom hooks
+description: List and usage of custom utility hooks in Swell.
+---
+
+# Custom utility hooks
+
+In **Swell**, several custom React hooks are provided to simplify state management,
+user preferences or business logic on the frontend. These hooks encapsulate recurring behaviors
+and facilitate code reuse in your components.
+
+## List of main hooks
+
+| Hook            | Description                                                                                | Context required?       |
+| --------------- | ------------------------------------------------------------------------------------------ | ----------------------- |
+| `useInitials`   | Generates initials from a first/last name, useful for user avatars.                       | No                      |
+| `useAppearance` | Manages theme (light/dark/system) and user choice persistence.                            | No                      |
+| `useCart`       | Allows access to cart, add/remove items, and track cart state.                            | Yes (`CartContext`)     |
+| `useWishlist`   | Allows managing user wishlist (add, remove, retrieve).                                    | Yes (`WishlistContext`) |
+
+<Callout>
+    Some hooks need to be used inside their associated context provider (e.g.: `CartProvider`, `WishlistProvider`, etc.).
+</Callout>
+
+## Usage examples
+
+### Get user initials
+
+```ts
+import { useInitials } from "@/hooks/use-initials";
+import type { SharedData } from "@/types";
+import { usePage } from "@inertiajs/react";
+
+const { auth } = usePage<SharedData>().props;
+const initials = useInitials(auth.user.name); // "JD"
+```
+
+### Manage appearance theme
+
+```ts
+import { useAppearance } from "@/hooks/use-appearance";
+
+const { theme, setTheme } = useAppearance();
+
+// To switch to dark mode:
+setTheme("dark");
+```
+
+### Use cart (with mandatory context)
+
+```ts
+import { useCartContext } from '@/contexts/cart-context';
+// Warning: this hook must be used inside <CartProvider>
+
+const { addToCart } = useCartContext();
+const PRODUCT = {...};
+addToCart({ product: PRODUCT, quantity: 2 });
+```
+
+<Callout>
+    Swell is entirely wrapped in the `CartProvider`. Thus, all child components can use cart-related hooks without additional configuration.
+</Callout>
+
+## Why use these hooks?
+
+-   **Logic centralization**: Business or UI logic is factorized and testable.
+-   **Reusability**: Hooks are usable in any component (provided they are in the right provider).
+-   **Readability**: Component code remains simple and readable.
+
+<Callout>
+    For more examples or to create your own hooks, draw inspiration from the structure of existing hooks in the
+    `resources/js/hooks/` folder.
+</Callout>

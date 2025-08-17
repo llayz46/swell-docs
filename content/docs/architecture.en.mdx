@@ -1,0 +1,60 @@
+---
+title: Architecture
+description: The organization of key folders in Swell.
+---
+
+## Application folder structure
+
+Swell is based on Laravel and its MVC architecture to facilitate project adoption, 
+customization, and project extension. Each folder has a well-defined responsibility
+and can be adapted according to your needs.
+
+## Main folders
+
+### `app/`
+
+Contains the server-side Laravel logic: controllers, requests, middlewares, etc. 
+**Swell** adds a lightweight structure around administration controllers 
+<span className='text-fd-muted-foreground text-sm'>(Http/Controllers/Admin)</span> notably.
+Without imposing a rigid architecture.
+
+We also find folders like **Factories**, used to centralize certain reusable business logic, 
+contributing to maintaining a clear and modular organization.
+
+### `resources/js/`
+
+All frontend code is organized here, with a structure designed for readability and maintainability:
+
+- `pages/`: Inertia pages, classified by feature 
+<span className='text-fd-muted-foreground text-sm'>(admin/products/, brands/, etc.)</span>.
+- `components/`: Swell groups its native components in `components/swell/`.
+- `layouts/`: global or section-specific layouts
+<span className='text-fd-muted-foreground text-sm'>(auth-layout, admin-layout, etc.)</span>.
+- `hooks/`, `context/`: reusable logic specific to the interface or user behavior, 
+integrated into certain components or pages.
+- `lib/`, `utils/`: utility functions or modules. Swell relies on these folders to centralize 
+certain recurring logic, without imposing structure on you.
+- `types/`: global project types. The `index.d.ts` file allows sharing types to maintain consistency between front-end and back-end.
+
+<Callout>
+    Swell provides this structure to get started quickly, but it remains freely adjustable according to your needs or development style.
+</Callout>
+
+This organization allows clarity and freedom in frontend development, while facilitating project evolution.
+
+### `routes/`
+
+Laravel routes are organized to reflect the functional domains of the application:
+
+- `admin.php`: routes related to the administration interface.
+- `web.php`: public routes.
+
+#### Compartmentalizing your routes
+
+For better organization, create new route files in the `routes/` folder according to your functional needs.
+Then import these files in `web.php` via require or require_once to keep a single and clear entry point for your routes.
+
+<Callout>
+    This organization is optional but recommended to facilitate maintenance and evolution of routes, 
+    especially in complex or modular projects.
+</Callout>

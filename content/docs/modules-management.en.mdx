@@ -1,0 +1,56 @@
+---
+title: Module management
+description: Activate, customize or remove features via module management in Swell.
+---
+
+## Module management: activate or remove features
+
+**Swell** adopts a modular approach to enrich your application: 
+each additional feature is offered as an optional module, ready to be activated, customized or removed according to your needs.
+
+This modularity allows you to adapt **Swell** to your project, without unnecessary overhead or dependency on features you don't need.
+
+### Activating a module
+
+To add a new feature, simply activate the corresponding module. 
+Modules are located in the `app/Modules/` folder and accessible via dedicated artisan commands.
+
+For example, to activate the "Wishlist" module:
+
+Modify your environment file `.env` to indicate to Swell that the feature should be available. 
+
+```bash
+SWELL_WISHLIST_ENABLED=true
+```
+
+Then, clear the configuration cache:
+
+```bash
+php artisan config:clear
+```
+
+Then run the following command:
+
+```bash
+php artisan swell:enable wishlist
+```
+
+This command publishes the necessary files (controllers, models, migrations…) and makes the feature immediately available in your application.
+
+<Callout>
+    Each module is independent: you can activate several, deactivate them or customize them without impacting Swell's core.
+</Callout>
+
+### Customizing a module
+
+Each module is customizable, you can adapt its components, views or configuration to your business needs. 
+
+Don't hesitate to modify these files to adjust the behavior or appearance of the feature.
+
+### Deactivating or removing a module
+
+If a feature is no longer useful to you, delete the associated migrations as well as the published files and deactivate it in your `.env` file.
+
+<Callout>
+    **Swell** gives you total control over your application's features. Activate only what you need, for a lightweight, clear foundation perfectly adapted to your project.
+</Callout>
