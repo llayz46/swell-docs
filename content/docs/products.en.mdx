@@ -1,0 +1,138 @@
+---
+title: Product Catalog
+description: Complete product catalog system in Swell - display, pagination, search and quick product preview.
+---
+
+## Product catalog system
+
+**Swell** integrates a sophisticated product catalog system that enables display, navigation and quick product consultation with an optimized user interface.
+
+## Catalog architecture
+
+### Main components
+
+The catalog system relies on several interconnected React components:
+
+`ProductListPage` - Main catalog page
+
+- Displays product grid with pagination
+- Manages filters and search
+- Integrates navigation breadcrumb
+- Coordinates display of other components
+
+Main props:
+```typescript
+interface ProductListPageProps {
+  title: string;
+  products: PaginatedResponse<Product>;
+  sort: SortType;
+  stock: { in: boolean, out: boolean };
+}
+```
+
+`ProductCard` - Individual product display card
+
+- Shows product image, name, price and brand
+- Action buttons (quick view, add to wishlist)
+- State management (out of stock, promotion)
+
+Main props:
+```typescript
+interface ProductCardProps {
+  product: Product;
+  onQuickView?: () => void;
+}
+```
+
+`PaginationComponent` - Page navigation component
+
+- Numbered navigation with ellipses
+- Previous/next buttons
+- Total results display
+- SEO-friendly URLs with query parameters
+
+Main props:
+```typescript
+interface PaginationProps {
+  pagination: {
+    links: {
+      first: string | undefined;
+      last: string | undefined;
+      prev: string | undefined;
+      next: string | undefined;
+    };
+    meta: {
+      current_page: number;
+      from: number;
+      last_page: number;
+      links: MetaLink[];
+      path: string;
+      per_page: number;
+      to: number;
+      total: number;
+    };
+  };
+  preserveQuery?: string[];
+  only?: string[];
+}
+```
+
+`ProductQuickViewModal` - Quick preview modal
+
+- Display without leaving catalog page
+- Add to cart
+- Essential product information
+
+Main props:
+```typescript
+interface QuickViewModalProps {
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+}
+```
+
+`ProductBreadcrumb` - Hierarchical navigation
+
+- Navigation path display
+- Links to parent pages
+
+Main props:
+```typescript
+interface BreadcrumbProps {
+  category: { name: string, slug: string };
+  product: { product: string, brand: string };
+}
+```
+
+## Advanced features
+
+### Performance optimizations
+
+- Lazy loading of product images
+- Server-side pagination
+- Frequent query caching
+- Next page preloading
+
+### Responsive design
+
+- Adaptive grid based on screen size
+- Mobile-optimized images
+- Accessible interface (ARIA, keyboard navigation)
+
+## Cart integration
+
+The catalog integrates seamlessly with the cart system:
+
+- Quick view with add to cart
+- Real-time stock synchronization
+- Visual feedback for user actions
+
+## Routes and navigation
+
+```php title="routes/web.php"
+Route::get('/products', [ProductController::class, 'index'])->name('product.index');
+Route::get('/categories/{category:slug}', CategoryController::class)->name('category.show');
+```
+
+The catalog system provides a smooth and performant user experience for product discovery and purchase.

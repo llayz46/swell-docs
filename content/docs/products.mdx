@@ -1,0 +1,138 @@
+---
+title: Catalogue Produits
+description: Système de catalogue produits complet dans Swell - affichage, pagination, recherche et aperçu rapide des produits.
+---
+
+## Système de catalogue produits
+
+**Swell** intègre un système de catalogue produits sophistiqué qui permet l'affichage, la navigation et la consultation rapide des produits avec une interface utilisateur optimisée.
+
+## Architecture du catalogue
+
+### Composants principaux
+
+Le système de catalogue repose sur plusieurs composants React interconnectés :
+
+`ProductListPage` - Page principale du catalogue
+
+- Affiche la grille des produits avec pagination
+- Gère les filtres et la recherche
+- Intègre le breadcrumb de navigation
+- Coordonne l'affichage des autres composants
+
+Props principales :
+```typescript
+interface ProductListPageProps {
+  title: string;
+  products: PaginatedResponse<Product>;
+  sort: SortType;
+  stock: { in: boolean, out: boolean };
+}
+```
+
+`ProductCard` - Carte d'affichage individuelle d'un produit
+
+- Affiche l'image, nom, prix et marque du produit
+- Boutons d'action (aperçu rapide, ajout à la wishlist)
+- Gestion des états (rupture de stock, promotion)
+
+Props principales :
+```typescript
+interface ProductCardProps {
+  product: Product;
+  onQuickView?: () => void;
+}
+```
+
+**PaginationComponent** - Composant de navigation entre les pages
+
+- Navigation numérotée avec ellipses
+- Boutons précédent/suivant
+- Affichage du nombre total de résultats
+- URLs SEO-friendly avec paramètres de requête
+
+Props principales :
+```typescript
+interface PaginationProps {
+  pagination: {
+    links: {
+      first: string | undefined;
+      last: string | undefined;
+      prev: string | undefined;
+      next: string | undefined;
+    };
+    meta: {
+      current_page: number;
+      from: number;
+      last_page: number;
+      links: MetaLink[];
+      path: string;
+      per_page: number;
+      to: number;
+      total: number;
+    };
+  };
+  preserveQuery?: string[];
+  only?: string[];
+}
+```
+
+`ProductQuickViewModal` - Modal d'aperçu rapide
+
+- Affichage sans quitter la page catalogue
+- Ajout au panier
+- Informations produit essentielles
+
+Props principales :
+```typescript
+interface QuickViewModalProps {
+  product: Product;
+  open: boolean;
+  onClose: () => void;
+}
+```
+
+`ProductBreadcrumb` - Navigation hiérarchique
+
+- Affichage du chemin de navigation
+- Liens vers les pages parentes
+
+Props principales :
+```typescript
+interface BreadcrumbProps {
+  category: { name: string, slug: string };
+  product: { product: string, brand: string };
+}
+```
+
+## Fonctionnalités avancées
+
+### Optimisations performances
+
+- Lazy loading des images produits
+- Pagination côté serveur
+- Cache des requêtes fréquentes
+- Préchargement des pages suivantes
+
+### Responsive design
+
+- Grille adaptative selon la taille d'écran
+- Images optimisées pour mobile
+- Interface accessible (ARIA, navigation clavier)
+
+## Intégration avec le panier
+
+Le catalogue s'intègre seamlessly avec le système de panier :
+
+- Aperçu rapide avec ajout au panier
+- Synchronisation temps réel des stocks
+- Feedback visuel des actions utilisateur
+
+## Routes et navigation
+
+```php title="routes/web.php"
+Route::get('/products', [ProductController::class, 'index'])->name('product.index');
+Route::get('/categories/{category:slug}', CategoryController::class)->name('category.show');
+```
+
+Le système de catalogue offre une expérience utilisateur fluide et performante pour la découverte et l'achat de produits.
