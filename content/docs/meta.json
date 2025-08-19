@@ -11,6 +11,7 @@
         "authentification",
         "products",
         "cart",
+        "dark-mode",
         "---Structure---",
         "architecture",
         "actions-modules",
