@@ -22,9 +22,10 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 `Modules/Feature/database/migrations`, permettant de définir la structure des tables correspondantes.
 
 <Callout>
-    Swell n’impose aucune logique métier. Les modèles proposés servent de socle initial, à adapter librement. Pour toute
-    modification de structure ou comportement, référez-vous à la documentation officielle de
-    [Laravel](https://laravel.com/docs/12.x/eloquent).
+  Swell n’impose aucune logique métier. Les modèles proposés servent de socle
+  initial, à adapter librement. Pour toute modification de structure ou
+  comportement, référez-vous à la documentation officielle de
+  [Laravel](https://laravel.com/docs/12.x/eloquent).
 </Callout>
 
 ## Structure des modèles
@@ -66,6 +67,7 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 | `cost_price`        | `decimal:10,2`                      |
 | `stock`             | `unsignedInteger` `default:0`       |
 | `reorder_level`     | `unsignedInteger` `default:10`      |
+| `sales_count`       | `unsignedInteger` `default:0`       |
 | `status`            | `boolean` `default:true`            |
 | `meta_title`        | `string` `nullable`                 |
 | `meta_description`  | `string` `max:255` `nullable`       |
@@ -78,7 +80,9 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 <span className="text-fd-muted-foreground text-sm">BelongsTo(Brand).</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(ProductImage).</span> <br />
 <span className="text-fd-muted-foreground text-sm">BelongsTo(Collection).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsToMany(Wishlist).</span> <br />
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Wishlist).
+</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(Comment).</span>
 
 ### Collection
@@ -90,7 +94,10 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 
 <span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
 
-<Callout>Collection permet d’associer plusieurs produits entre eux au sein d’une même collection.</Callout>
+<Callout>
+  Collection permet d’associer plusieurs produits entre eux au sein d’une même
+  collection.
+</Callout>
 
 ### ProductImage
 
@@ -144,7 +151,9 @@ Ils sont associés à leurs fichiers de migration respectifs dans `database/migr
 | `user_id` | `integer` `cascadeOnDelete` |
 
 <span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsToMany(Product).</span>
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Product).
+</span>
 
 ### Order
 
