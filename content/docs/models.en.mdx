@@ -22,9 +22,10 @@ They are associated with their respective migration files in `database/migration
 `Modules/Feature/database/migrations`, allowing you to define the structure of corresponding tables.
 
 <Callout>
-    Swell imposes no business logic. The proposed models serve as an initial foundation, to be freely adapted. For any
-    structure or behavior modification, refer to the official
-    [Laravel](https://laravel.com/docs/12.x/eloquent) documentation.
+  Swell imposes no business logic. The proposed models serve as an initial
+  foundation, to be freely adapted. For any structure or behavior modification,
+  refer to the official [Laravel](https://laravel.com/docs/12.x/eloquent)
+  documentation.
 </Callout>
 
 ## Model structure
@@ -66,6 +67,7 @@ They are associated with their respective migration files in `database/migration
 | `cost_price`        | `decimal:10,2`                      |
 | `stock`             | `unsignedInteger` `default:0`       |
 | `reorder_level`     | `unsignedInteger` `default:10`      |
+| `sales_count`       | `unsignedInteger` `default:0`       |
 | `status`            | `boolean` `default:true`            |
 | `meta_title`        | `string` `nullable`                 |
 | `meta_description`  | `string` `max:255` `nullable`       |
@@ -78,7 +80,9 @@ They are associated with their respective migration files in `database/migration
 <span className="text-fd-muted-foreground text-sm">BelongsTo(Brand).</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(ProductImage).</span> <br />
 <span className="text-fd-muted-foreground text-sm">BelongsTo(Collection).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsToMany(Wishlist).</span> <br />
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Wishlist).
+</span> <br />
 <span className="text-fd-muted-foreground text-sm">HasMany(Comment).</span>
 
 ### Collection
@@ -90,7 +94,10 @@ They are associated with their respective migration files in `database/migration
 
 <span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
 
-<Callout>Collection allows associating multiple products together within the same collection.</Callout>
+<Callout>
+  Collection allows associating multiple products together within the same
+  collection.
+</Callout>
 
 ### ProductImage
 
@@ -144,7 +151,9 @@ They are associated with their respective migration files in `database/migration
 | `user_id` | `integer` `cascadeOnDelete` |
 
 <span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsToMany(Product).</span>
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Product).
+</span>
 
 ### Order
 
