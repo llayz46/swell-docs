@@ -49,14 +49,39 @@ public function index(Request $request)
     $search = $request->input('search');
 
     if ($search) {
-        $products = Product::search($search)
-            ->query(function ($query) use ($in, $out, $sort) {
-                $query->where('status', true)
-                    ->with('featuredImage', 'brand');
+        $searchBuilder = Product::search($search, function ($algolia, $query, $options) use ($minPrice, $maxPrice, $sort) {
+            $numericFilters = [];
+            if ($minPrice !== null) {
+                $numericFilters[] = "effective_price >= {$minPrice}";
+            }
+            if ($maxPrice !== null) {
+                $numericFilters[] = "effective_price <= {$maxPrice}";
+            }
 
-                $this->applyStockFilter($query, $in, $out);
-                $this->applySort($query, $sort);
-            })->paginate(16)->withQueryString();
+            $options['numericFilters'] = array_merge(
+                (array) ($options['numericFilters'] ?? []),
+                $numericFilters
+            );
+
+            $indexName = match($sort) {
+                'price_asc' => 'products_price_asc',
+                'price_desc' => 'products_price_desc',
+                'news' => 'products_created_at_desc',
+                default => (new Product)->searchableAs(),
+            };
+
+            return $algolia->searchSingleIndex(
+                $indexName,
+                array_merge(['query' => $query], $options)
+            );
+        });
+
+        $products = $searchBuilder->query(function ($query) use ($in, $out) {
+            $query->where('status', true)
+                ->with('featuredImage', 'brand');
+
+            $this->applyStockFilter($query, $in, $out);
+        })->paginate(16)->withQueryString();
     }
 
     // ...
@@ -75,7 +100,9 @@ public function index(Request $request)
 **SearchInput** - Main search bar
 
 ```tsx title="resources/js/components/swell/header.tsx"
-const [search, setSearch] = useState<string>(() => new URLSearchParams(window.location.search).get('search') || '');
+const [search, setSearch] = useState<string>(() => 
+    new URLSearchParams(window.location.search).get('search') || ''
+);
 
 const debouncedSearch = useMemo(() =>
     debounce((value) => {
