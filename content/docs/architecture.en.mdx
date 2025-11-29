@@ -5,7 +5,7 @@ description: The organization of key folders in Swell.
 
 ## Application folder structure
 
-Swell is based on Laravel and its MVC architecture to facilitate project adoption, 
+Swell is based on Laravel and its MVC architecture to facilitate project adoption,
 customization, and project extension. Each folder has a well-defined responsibility
 and can be adapted according to your needs.
 
@@ -13,31 +13,100 @@ and can be adapted according to your needs.
 
 ### `app/`
 
-Contains the server-side Laravel logic: controllers, requests, middlewares, etc. 
-**Swell** adds a lightweight structure around administration controllers 
-<span className='text-fd-muted-foreground text-sm'>(Http/Controllers/Admin)</span> notably.
-Without imposing a rigid architecture.
+The core of the Laravel application containing all server-side logic. **Swell** organizes this folder in a clear and extensible way:
 
-We also find folders like **Factories**, used to centralize certain reusable business logic, 
-contributing to maintaining a clear and modular organization.
+#### Detailed structure
+
+- **`Actions/`**: Reusable business actions (e.g., `HandleProduct`, `Stripe/HandleCheckoutSessionCompleted`)
+  - Centralizes complex logic into testable and reusable units
+  - Separates business logic from controllers
+
+- **`Factories/`**: Custom factories to create complex objects
+  - `CartFactory`: Manages cart creation (guest vs authenticated)
+  - Factory pattern for clean and consistent instantiation
+
+- **`Http/`**: HTTP layer of the application
+  - `Controllers/`: Standard controllers organized by feature
+    - `Admin/`: Administration controllers (products, orders, users, etc.)
+    - `Settings/`: Controllers for user settings
+  - `Middleware/`: Custom middlewares (feature flags, etc.)
+  - `Requests/`: Form requests for validation
+  - `Resources/`: API Resources to transform data to Inertia (not REST APIs)
+
+- **`Models/`**: Eloquent models with relationships and scopes
+  - Follows Laravel standard conventions
+  - Well-defined relationships between entities
+  - Scopes for common queries
+
+- **`Modules/`**: Modular architecture for optional features
+  - `Banner/`: Information banner system
+  - `Review/`: Product reviews and ratings
+  - `Wishlist/`: Wishlist feature
+  - `Loyalty/`: Loyalty points system
+  - Each module is self-contained with its models, controllers, migrations
+
+- **`Providers/`**: Laravel service providers
+  - Service configuration and bindings
+
+<Callout type="info">
+  The architecture remains flexible: you can add your own folders (Services/, Repositories/, etc.) according to your needs without compromising the existing structure.
+</Callout>
 
 ### `resources/js/`
 
-All frontend code is organized here, with a structure designed for readability and maintainability:
+The modern frontend of **Swell** uses React 19 with TypeScript and Inertia.js. The organization follows a clear and modular structure:
 
-- `pages/`: Inertia pages, classified by feature 
-<span className='text-fd-muted-foreground text-sm'>(admin/products/, brands/, etc.)</span>.
-- `components/`: Swell groups its native components in `components/swell/`.
-- `layouts/`: global or section-specific layouts
-<span className='text-fd-muted-foreground text-sm'>(auth-layout, admin-layout, etc.)</span>.
-- `hooks/`, `context/`: reusable logic specific to the interface or user behavior, 
-integrated into certain components or pages.
-- `lib/`, `utils/`: utility functions or modules. Swell relies on these folders to centralize 
-certain recurring logic, without imposing structure on you.
-- `types/`: global project types. The `index.d.ts` file allows sharing types to maintain consistency between front-end and back-end.
+#### Detailed structure
+
+- **`pages/`**: Inertia pages auto-resolvable by naming convention
+  - `admin/`: Administration interface (Dashboard, Products, Orders, Users, Loyalty, etc.)
+  - `auth/`: Authentication pages (Login, Register, ForgotPassword)
+  - `brands/`: Brand pages
+  - `cart/`: Cart page
+  - `categories/`: Category pages
+  - `orders/`: User order pages
+  - `products/`: Product pages (listing, details)
+  - `settings/`: User settings
+  - Organization by feature for easy navigation
+
+- **`components/`**: Reusable React components
+  - `ui/`: Shadcn/ui components (Button, Card, Dialog, etc.)
+  - `swell/`: Swell-specific components (ProductCard, CartItem, ReviewSection, etc.)
+  - Component-oriented architecture for reusability
+
+- **`layouts/`**: Layouts to structure pages
+  - `AdminLayout.tsx`: Admin interface layout with sidebar
+  - `AuthLayout.tsx`: Layout for authentication pages
+  - `GuestLayout.tsx`: Layout for visitors
+  - Shared layouts for visual consistency
+
+- **`contexts/`**: React Context for global state management
+  - `CartContext.tsx`: Cart state
+  - `WishlistContext.tsx`: Wishlist state
+  - `ReviewContext.tsx`: Review state
+  - Provides shared state between components
+
+- **`hooks/`**: Custom React hooks
+  - Reusable logic extracted from components
+  - Hooks for API calls, forms, etc.
+
+- **`lib/`**: Libraries and configurations
+  - Third-party library configuration
+  - Specialized utilities
+
+- **`utils/`**: Utility functions
+  - `formatCurrency()`, `formatDate()`, etc.
+  - Helpers for formatting and data manipulation
+
+- **`types/`**: TypeScript definitions
+  - `index.d.ts`: Global types shared between frontend and backend
+  - Types for Inertia props, models, etc.
+  - Ensures type consistency
+
+- **`ssr.tsx`**: Entry point for server-side rendering (SSR)
 
 <Callout>
-    Swell provides this structure to get started quickly, but it remains freely adjustable according to your needs or development style.
+  Swell provides this structure to get started quickly, but it remains freely adjustable according to your needs or development style. You can add your own folders or reorganize according to your preferences.
 </Callout>
 
 This organization allows clarity and freedom in frontend development, while facilitating project evolution.
@@ -46,15 +115,318 @@ This organization allows clarity and freedom in frontend development, while faci
 
 Laravel routes are organized to reflect the functional domains of the application:
 
-- `admin.php`: routes related to the administration interface.
-- `web.php`: public routes.
+- **`web.php`**: Public and authenticated routes
+  - Product, category, brand pages
+  - Cart and checkout
+  - User profile
+  - Main entry point
+
+- **`admin.php`**: Administration routes
+  - Admin dashboard
+  - Product, category, brand management
+  - Order and user management
+  - Module management (Loyalty, Reviews, etc.)
+  - Protected by `role:admin` middleware
+
+- **`settings.php`**: User settings routes
+  - Profile, preferences
+  - User orders
+  - Separated for better organization
+
+- **`auth.php`**: Authentication routes
+  - Login, register, logout
+  - Password reset, email verification
+  - Provided by Laravel Breeze
 
 #### Compartmentalizing your routes
 
 For better organization, create new route files in the `routes/` folder according to your functional needs.
-Then import these files in `web.php` via require or require_once to keep a single and clear entry point for your routes.
+Then import these files in `web.php` via `require` or `require_once` to keep a single and clear entry point for your routes.
+
+```php
+// Example in web.php
+require __DIR__.'/settings.php';
+require __DIR__.'/admin.php';
+```
 
 <Callout>
-    This organization is optional but recommended to facilitate maintenance and evolution of routes, 
-    especially in complex or modular projects.
+  This organization is optional but recommended to facilitate route maintenance and evolution,
+  especially in complex or modular projects.
+</Callout>
+
+### `database/`
+
+Organized and versioned database structure:
+
+- **`migrations/`**: Migrations to create and modify the schema
+  - Core migrations in this folder
+  - Module migrations in their respective folders
+  - Complete schema versioning
+
+- **`seeders/`**: Seeders to populate the database
+  - `DatabaseSeeder.php`: Main seeder
+  - `RoleSeeder.php`: Role creation (admin, user)
+  - `ProdSeeder.php`: Minimal production data
+  - `LocalSeeder.php`: Development data with test products
+  - Production/development separation
+
+- **`factories/`**: Factories to generate test data
+  - One factory per model for tests
+  - Used by development seeders
+
+### `config/`
+
+Application configuration files:
+
+- **`swell.php`**: Swell-specific configuration
+  - Module feature flags (wishlist, review, banner, loyalty)
+  - Loyalty system configuration
+  - Order prefix
+  - Central point for business configuration
+
+- Other standard Laravel files (app.php, database.php, etc.)
+
+### `tests/`
+
+Complete test suite with Pest v4:
+
+- **`Feature/`**: End-to-end functional tests
+  - `CartTest.php`: Cart system tests
+  - `LoyaltyTest.php`: Loyalty system tests
+  - `AuthTest.php`: Authentication tests
+  - Complete workflow tests
+
+- **`Unit/`**: Unit tests
+  - Isolated class tests
+  - Helper and utility tests
+
+<Callout type="info">
+  Swell uses Pest v4 for more expressive and readable tests. All tests can be run with `php artisan test` or `composer test`.
+</Callout>
+
+### `public/`
+
+Public assets and entry point:
+
+- **`index.php`**: Application entry point
+- **`build/`**: Assets compiled by Vite (CSS, JS)
+- Images, fonts, and other static assets
+
+### `resources/`
+
+Application resources:
+
+- **`js/`**: React + TypeScript frontend code (detailed above)
+- **`css/`**: Global styles and Tailwind configuration
+  - `app.css`: CSS entry point with Tailwind directives
+- **`views/`**: Blade templates (minimal, mainly for Inertia)
+  - `app.blade.php`: Main Inertia template
+
+### `bootstrap/`
+
+Application startup files:
+
+- **`app.php`**: Laravel application initialization
+- **`providers.php`**: Service provider registration
+  - Module service providers (Loyalty, Review, etc.)
+  - Central point for loading modules
+
+## Modular architecture
+
+### Module principle
+
+Swell uses a modular architecture for optional features. Each module is completely self-contained in `app/Modules/{ModuleName}/`:
+
+```
+app/Modules/{ModuleName}/
+├── Models/              # Eloquent models of the module
+├── Http/
+│   ├── Controllers/     # Controllers (user + admin)
+│   └── Resources/       # API Resources for Inertia
+├── Services/            # Business logic (optional)
+├── Enums/              # PHP 8.1+ enums (optional)
+├── database/
+│   └── migrations/      # Module migrations
+└── {Module}ServiceProvider.php  # Service provider
+```
+
+### Architecture advantages
+
+1. **Isolation**: Each module is independent, facilitates debugging and maintenance
+2. **Simple activation/deactivation**: Via feature flags in `.env`
+3. **No core pollution**: Optional code remains separate
+4. **Testability**: Modules testable independently
+5. **Reusability**: Modules portable between Swell projects
+
+### Available modules
+
+| Module | Description | Feature Flag |
+|--------|-------------|--------------|
+| **Banner** | Site-wide information messages | `SWELL_BANNER_ENABLED` |
+| **Review** | Product reviews and ratings | `SWELL_REVIEW_ENABLED` |
+| **Wishlist** | User wishlist | `SWELL_WISHLIST_ENABLED` |
+| **Loyalty** | Loyalty points and rewards | `SWELL_LOYALTY_ENABLED` |
+
+See the [Module Management](/modules-management) page for more details.
+
+## Design principles
+
+### Separation of concerns
+
+- **Controllers**: HTTP request handling, validation, response return
+- **Actions**: Complex and reusable business logic
+- **Models**: Data access and relationships
+- **Resources**: Data transformation for the frontend
+- **Services**: Module business logic (e.g., LoyaltyService)
+
+### Action Pattern
+
+Swell uses the Action pattern to centralize complex business logic:
+
+```php
+// app/Actions/HandleProduct.php
+class HandleProduct
+{
+    public function handle(Product $product, array $data): void
+    {
+        // Centralized business logic
+        // Testable, reusable, maintainable
+    }
+}
+```
+
+**Advantages**:
+- Business code separated from controllers
+- Easily testable in isolation
+- Reusable in different contexts
+- Well-defined single responsibility
+
+### Cache and performance
+
+Swell implements cache strategies to optimize performance:
+
+- **Categories**: Complete tree cache (key: `categories-tree`)
+- **Cart**: Cache per user/session (key: `cart-{userId|sessionId}`, 30s)
+- **LoyaltyAccount**: Cache per user (key: `loyalty-account-{userId}`, 60s)
+
+**Automatic invalidation**: Services invalidate cache on modifications (e.g., `LoyaltyService::clearAccountCache()`)
+
+### Inertia.js and shared props
+
+All Inertia pages automatically receive props via `HandleInertiaRequests`:
+
+- Global configuration (`swell.*`)
+- Authenticated user (`auth.user`)
+- Current cart (`cart`)
+- Loyalty account (`loyaltyAccount`)
+- Laravel routes (`ziggy`)
+- Categories (`categories`)
+
+**Advantage**: Essential data available everywhere without duplication
+
+### TypeScript and strong typing
+
+Swell uses TypeScript to ensure type consistency between backend and frontend:
+
+```typescript
+// resources/js/types/index.d.ts
+export interface Product {
+  id: number;
+  name: string;
+  slug: string;
+  price: number;
+  // ...
+}
+```
+
+Laravel Resources transform data into the format expected by TypeScript.
+
+## Naming conventions
+
+### Backend (PHP)
+
+- **Classes**: PascalCase (`ProductController`, `LoyaltyService`)
+- **Methods**: camelCase (`awardPoints`, `getOrCreateAccount`)
+- **Variables**: camelCase (`$userId`, `$orderTotal`)
+- **Constants**: SCREAMING_SNAKE_CASE (`MAX_DISCOUNT`)
+
+### Frontend (TypeScript/React)
+
+- **Components**: PascalCase (`ProductCard.tsx`, `CartItem.tsx`)
+- **Functions**: camelCase (`formatCurrency`, `calculateTotal`)
+- **Variables**: camelCase (`userId`, `orderTotal`)
+- **Constants**: SCREAMING_SNAKE_CASE or camelCase depending on context
+
+### Database
+
+- **Tables**: plural snake_case (`products`, `loyalty_accounts`)
+- **Columns**: snake_case (`user_id`, `created_at`)
+- **Foreign keys**: `{model}_id` (`product_id`, `order_id`)
+
+## Best practices
+
+### 1. Use Actions for business logic
+
+❌ **Avoid**:
+```php
+// In a controller
+public function store(Request $request)
+{
+    // 50 lines of business logic here...
+}
+```
+
+✅ **Prefer**:
+```php
+public function store(Request $request, HandleProduct $action)
+{
+    $action->handle($request->validated());
+    return redirect()->back();
+}
+```
+
+### 2. Use Services for modules
+
+Modules should centralize their logic in a Service:
+
+```php
+// ✅ Good
+$loyaltyService->awardPoints($user, 100, 'Purchase bonus');
+
+// ❌ Bad - direct modification
+$account->points += 100;
+$account->save();
+```
+
+### 3. Invalidate cache when necessary
+
+Services should handle cache invalidation:
+
+```php
+public function updateCart(Cart $cart): void
+{
+    $cart->save();
+    Cache::forget("cart-{$cart->user_id}");
+}
+```
+
+### 4. Type your Inertia props
+
+Always define TypeScript types for your pages:
+
+```typescript
+import { PageProps } from '@/types';
+
+interface Props extends PageProps {
+  product: Product;
+  reviews: Review[];
+}
+
+export default function Show({ product, reviews }: Props) {
+  // ...
+}
+```
+
+<Callout type="info">
+  This architecture has been designed to be **simple, extensible and maintainable**. Feel free to adapt it according to your needs while keeping these principles in mind.
 </Callout>

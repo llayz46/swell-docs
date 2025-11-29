@@ -3,34 +3,38 @@ title: Models
 description: Models in Swell, adapt them to your project.
 ---
 
-## Data models
+## Data Models
 
 Swell offers a collection of ready-to-use models, designed to cover the common needs of a modern e-commerce project.
 
-These models serve as a solid foundation, but remain entirely customizable to adapt to the structure and specificities
+These models serve as a solid foundation, but remain fully customizable to adapt to the structure and specificities
 of your application.
 
-You can thus modify them or create new ones according to your business domain requirements,
-while benefiting from smooth integration with the Swell ecosystem.
+You can modify them or create new ones according to your business domain requirements,
+while enjoying seamless integration with the Swell ecosystem.
 
-## Adapting a model
+## Adapting a Model
 
-**Swell** models are basically located in the `app/Models` folder, except for
-optional features whose models are placed in `app/Modules/Feature/Models`.
+**Swell** models are located in the `app/Models` folder, except for optional
+features whose models are placed in `app/Modules/{ModuleName}/Models`.
 
 They are associated with their respective migration files in `database/migrations` or
-`Modules/Feature/database/migrations`, allowing you to define the structure of corresponding tables.
+`app/Modules/{ModuleName}/database/migrations`, allowing you to define the structure of corresponding tables.
 
 <Callout>
-  Swell imposes no business logic. The proposed models serve as an initial
-  foundation, to be freely adapted. For any structure or behavior modification,
-  refer to the official [Laravel](https://laravel.com/docs/12.x/eloquent)
-  documentation.
+  Swell does not impose any business logic. The proposed models serve as an
+  initial foundation, to be freely adapted. For any modification of structure or
+  behavior, refer to the official
+  [Laravel](https://laravel.com/docs/12.x/eloquent) documentation.
 </Callout>
 
-## Model structure
+## Core Models
+
+These models constitute the heart of the e-commerce application and are located in `app/Models/`.
 
 ### Brand
+
+Represents a product brand.
 
 | Field      | Type                |
 | ---------- | ------------------- |
@@ -38,9 +42,12 @@ They are associated with their respective migration files in `database/migration
 | `slug`     | `string` `unique`   |
 | `logo_url` | `string` `nullable` |
 
-<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+**Relations**:
+- `hasMany(Product)` - A brand has multiple products
 
 ### Category
+
+Represents a product category with hierarchical support (categories/subcategories).
 
 | Field         | Type                      |
 | ------------- | ------------------------- |
@@ -50,10 +57,18 @@ They are associated with their respective migration files in `database/migration
 | `status`      | `boolean` `default:true`  |
 | `parent_id`   | `nullable` `nullOnDelete` |
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Category).</span> <br />
-<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+**Relations**:
+- `belongsTo(Category)` - Parent category (for hierarchy)
+- `hasMany(Category)` - Child subcategories
+- `hasMany(Product)` - Products in this category
+
+<Callout type="info">
+  The `parent_id` field allows creating a tree structure of categories/subcategories.
+</Callout>
 
 ### Product
+
+Main model representing a product with variant support, images, and Algolia integration.
 
 | Field               | Type                                |
 | ------------------- | ----------------------------------- |
@@ -63,7 +78,7 @@ They are associated with their respective migration files in `database/migration
 | `description`       | `text`                              |
 | `short_description` | `string` `max:500`                  |
 | `price`             | `decimal:10,2`                      |
-| `discount_price`    | `decimal:10,2`                      |
+| `discount_price`    | `decimal:10,2` `nullable`           |
 | `cost_price`        | `decimal:10,2`                      |
 | `stock`             | `unsignedInteger` `default:0`       |
 | `reorder_level`     | `unsignedInteger` `default:10`      |
@@ -76,86 +91,134 @@ They are associated with their respective migration files in `database/migration
 | `category_id`       | `integer` `nullOnDelete`            |
 | `collection_id`     | `integer` `nullable` `nullOnDelete` |
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Category).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Brand).</span> <br />
-<span className="text-fd-muted-foreground text-sm">HasMany(ProductImage).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Collection).</span> <br />
-<span className="text-fd-muted-foreground text-sm">
-  BelongsToMany(Wishlist).
-</span> <br />
-<span className="text-fd-muted-foreground text-sm">HasMany(Comment).</span>
+**Relations**:
+- `belongsTo(Category)` - Product category
+- `belongsTo(Brand)` - Product brand
+- `belongsTo(Collection)` - Associated collection (optional)
+- `hasMany(ProductImage)` - Product images
+- `hasOne(ProductImage)` - Featured image (via `featuredImage()`)
+- `hasMany(ProductOption)` - Options/variants (size, color, etc.)
+- `hasMany(Review)` - Customer reviews (Review module)
+- `hasMany(OrderItem)` - Order items
+- `belongsToMany(Wishlist)` - Wishlists (Wishlist module)
+
+**Useful methods**:
+- `getPrice()` - Returns `discount_price` if defined, otherwise `price`
+- `isOutOfStock()` - Checks if stock is depleted
+- `incrementSales($quantity)` - Increments sales counter
+- `scopePopular($limit)` - Scope to retrieve popular products
+
+**Traits**:
+- `Searchable` (Laravel Scout) - Automatic synchronization with Algolia
+- `shouldBeSearchable()` - Only products with `status = true` are indexed
 
 ### Collection
+
+Groups multiple products under a thematic collection (e.g., "New Arrivals", "Summer Sale").
 
 | Field   | Type              |
 | ------- | ----------------- |
 | `title` | `string`          |
 | `slug`  | `string` `unique` |
 
-<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+**Relations**:
+- `hasMany(Product)` - Products in this collection
 
 <Callout>
-  Collection allows associating multiple products together within the same
-  collection.
+  Collections allow associating multiple products together for thematic or seasonal highlights.
 </Callout>
 
 ### ProductImage
 
-| Field         | Type                      |
-| ------------- | ------------------------- |
-| `image_url`   | `string`                  |
-| `alt_text`    | `string` `nullable`       |
-| `is_featured` | `boolean` `default:false` |
-| `order`       | `unsignedInteger`         |
+Images associated with a product with featured image support.
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+| Field         | Type                        |
+| ------------- | --------------------------- |
+| `product_id`  | `integer` `cascadeOnDelete` |
+| `image_url`   | `string`                    |
+| `alt_text`    | `string` `nullable`         |
+| `is_featured` | `boolean` `default:false`   |
+| `order`       | `unsignedInteger`           |
 
-### Review
+**Relations**:
+- `belongsTo(Product)` - Associated product
 
-| Field        | Type                              |
-| ------------ | --------------------------------- |
-| `title`      | `string`                          |
-| `comment`    | `text` `nullable`                 |
-| `rating`     | `unsignedTinyInteger` `default:0` |
-| `user_id`    | `integer` `cascadeOnDelete`       |
-| `product_id` | `integer` `cascadeOnDelete`       |
+<Callout type="info">
+  Only one image can have `is_featured = true` per product. It is used as the main image in listings.
+</Callout>
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+### ProductOption
+
+Options/variants available for a product (e.g., "Size", "Color").
+
+| Field        | Type                        |
+| ------------ | --------------------------- |
+| `product_id` | `integer` `cascadeOnDelete` |
+| `name`       | `string`                    |
+
+**Relations**:
+- `belongsTo(Product)` - Associated product
+- `hasMany(ProductOptionValue)` - Possible values for this option
+
+**Usage example**:
+```php
+// Option: Size
+// Values: S, M, L, XL
+
+// Option: Color
+// Values: Red, Blue, Black
+```
+
+### ProductOptionValue
+
+Possible values for a product option.
+
+| Field               | Type                        |
+| ------------------- | --------------------------- |
+| `product_option_id` | `integer` `cascadeOnDelete` |
+| `value`             | `string`                    |
+
+**Relations**:
+- `belongsTo(ProductOption)` - Associated option
 
 ### Cart
+
+Shopping cart (session-based for guests, persistent for authenticated users).
 
 | Field        | Type                                   |
 | ------------ | -------------------------------------- |
 | `session_id` | `string` `nullable`                    |
 | `user_id`    | `integer` `nullable` `cascadeOnDelete` |
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
-<span className="text-fd-muted-foreground text-sm">HasMany(CartItem).</span>
+**Relations**:
+- `belongsTo(User)` - User (if authenticated)
+- `hasMany(CartItem)` - Cart items
+
+<Callout>
+  Swell uses `CartFactory` to automatically manage guest carts (session) vs authenticated users.
+</Callout>
 
 ### CartItem
+
+Individual item in a cart with product option support.
 
 | Field        | Type                          |
 | ------------ | ----------------------------- |
 | `cart_id`    | `integer` `cascadeOnDelete`   |
 | `product_id` | `integer` `cascadeOnDelete`   |
 | `quantity`   | `unsignedInteger` `default:1` |
+| `options`    | `json` `nullable`             |
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Cart).</span>
+**Relations**:
+- `belongsTo(Cart)` - Associated cart
+- `belongsTo(Product)` - Added product
 
-### Wishlist
-
-| Field     | Type                        |
-| --------- | --------------------------- |
-| `user_id` | `integer` `cascadeOnDelete` |
-
-<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
-<span className="text-fd-muted-foreground text-sm">
-  BelongsToMany(Product).
-</span>
+**Casts**:
+- `options` → `array` - Selected options for this product (e.g., `{"Size": "M", "Color": "Blue"}`)
 
 ### Order
+
+Finalized order with automatic order number generation.
 
 | Field                        | Type                        |
 | ---------------------------- | --------------------------- |
@@ -168,29 +231,278 @@ They are associated with their respective migration files in `database/migration
 | `shipping_address`           | `json`                      |
 | `user_id`                    | `integer` `cascadeOnDelete` |
 
-<span className="text-fd-muted-foreground text-sm">HasMany(OrderItem).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span>
+**Relations**:
+- `belongsTo(User)` - Order customer
+- `hasMany(OrderItem)` - Ordered products
+
+**Casts**:
+- `billing_address` → `collection`
+- `shipping_address` → `collection`
+
+**Automatic generation**:
+The `order_number` is generated in the format: `{PREFIX}-{YEAR}-{RANDOM}` (e.g., `ORD-2025-A3F8K9L2`)
+- Prefix configurable via `SWELL_ORDER_PREFIX` (default: `ORD`)
+
+**Useful methods**:
+- `total()` - Calculates order total from items
 
 ### OrderItem
 
+Individual product in an order (snapshot for history).
+
 | Field             | Type              |
 | ----------------- | ----------------- |
+| `order_id`        | `integer`         |
+| `product_id`      | `integer`         |
 | `name`            | `string`          |
 | `description`     | `text`            |
 | `price`           | `unsignedInteger` |
 | `quantity`        | `unsignedInteger` |
 | `amount_discount` | `unsignedInteger` |
 | `amount_total`    | `unsignedInteger` |
-| `order_id`        | `integer`         |
-| `product_id`      | `integer`         |
 
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Order).</span> <br />
-<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+**Relations**:
+- `belongsTo(Order)` - Associated order
+- `belongsTo(Product)` - Product reference
 
-### Banner
+<Callout type="info">
+  Product details are copied to OrderItem to preserve history even if the product is later modified or deleted.
+</Callout>
+
+## Module Models
+
+These models are part of optional features and are located in `app/Modules/{ModuleName}/Models/`.
+
+### BannerMessage (Banner Module)
+
+Information messages displayed on the site.
 
 | Field       | Type                          |
 | ----------- | ----------------------------- |
 | `message`   | `string`                      |
 | `is_active` | `boolean`                     |
 | `order`     | `unsignedInteger` `default:0` |
+
+**Location**: `app/Modules/Banner/Models/BannerMessage.php`
+
+**Casts**:
+- `is_active` → `boolean`
+
+<Callout>
+  Banners with `is_active = true` are displayed in the order defined by the `order` field.
+</Callout>
+
+### Review (Review Module)
+
+Product reviews and ratings left by customers.
+
+| Field        | Type                              |
+| ------------ | --------------------------------- |
+| `user_id`    | `integer` `cascadeOnDelete`       |
+| `product_id` | `integer` `cascadeOnDelete`       |
+| `title`      | `string`                          |
+| `comment`    | `text` `nullable`                 |
+| `rating`     | `unsignedTinyInteger` `default:0` |
+
+**Location**: `app/Modules/Review/Models/Review.php`
+
+**Relations**:
+- `belongsTo(User)` - Review author
+- `belongsTo(Product)` - Reviewed product
+
+**Casts**:
+- `rating` → `integer` (typically 1-5 stars)
+
+### Wishlist (Wishlist Module)
+
+User wishlist.
+
+| Field     | Type                        |
+| --------- | --------------------------- |
+| `user_id` | `integer` `cascadeOnDelete` |
+
+**Location**: `app/Modules/Wishlist/Models/Wishlist.php`
+
+**Relations**:
+- `belongsTo(User)` - Wishlist owner
+- `belongsToMany(Product)` - Products in wishlist (via pivot table `wishlist_items`)
+
+### LoyaltyAccount (Loyalty Module)
+
+User loyalty points account.
+
+| Field             | Type                        |
+| ----------------- | --------------------------- |
+| `user_id`         | `integer` `cascadeOnDelete` |
+| `points`          | `integer` `default:0`       |
+| `lifetime_points` | `integer` `default:0`       |
+
+**Location**: `app/Modules/Loyalty/Models/LoyaltyAccount.php`
+
+**Relations**:
+- `belongsTo(User)` - Account owner
+- `hasMany(LoyaltyTransaction)` - Transaction history
+
+**Computed accessors**:
+- `available_points` - Available points (non-expired)
+- `expiring_points` - Points expiring in the next 30 days
+
+**Casts**:
+- `points` → `integer`
+- `lifetime_points` → `integer`
+
+<Callout type="info">
+  `lifetime_points` represents total points earned since registration (never decreases). `points` represents current balance.
+</Callout>
+
+### LoyaltyTransaction (Loyalty Module)
+
+Loyalty points transaction (earn, spend, expiration, etc.).
+
+| Field                | Type                        |
+| -------------------- | --------------------------- |
+| `loyalty_account_id` | `integer` `cascadeOnDelete` |
+| `type`               | `enum` (TransactionType)    |
+| `points`             | `integer`                   |
+| `balance_after`      | `integer`                   |
+| `description`        | `string`                    |
+| `order_id`           | `integer` `nullable`        |
+| `expires_at`         | `datetime` `nullable`       |
+
+**Location**: `app/Modules/Loyalty/Models/LoyaltyTransaction.php`
+
+**Relations**:
+- `belongsTo(LoyaltyAccount)` - Loyalty account
+- `belongsTo(Order)` - Associated order (if applicable)
+
+**Transaction types (Enum)**:
+- `EARNED` - Points earned
+- `SPENT` - Points spent
+- `EXPIRED` - Points expired
+- `REFUNDED` - Points refunded
+- `ADMIN_ADJUSTMENT` - Admin adjustment
+
+**Casts**:
+- `type` → `TransactionType` (enum)
+- `points` → `integer`
+- `balance_after` → `integer`
+- `expires_at` → `datetime`
+
+**Useful methods**:
+- `isExpired()` - Checks if points have expired
+- `isExpiringSoon()` - Checks if points expire in the next 30 days
+
+## Model Relationships
+
+### Simplified diagram
+
+```
+User
+├── hasMany(Order)
+├── hasMany(Review)
+├── hasOne(Cart)
+├── hasOne(Wishlist)
+└── hasOne(LoyaltyAccount)
+
+Product
+├── belongsTo(Brand)
+├── belongsTo(Category)
+├── belongsTo(Collection)
+├── hasMany(ProductImage)
+├── hasMany(ProductOption)
+├── hasMany(Review)
+└── belongsToMany(Wishlist)
+
+Order
+├── belongsTo(User)
+├── hasMany(OrderItem)
+└── hasMany(LoyaltyTransaction)
+
+LoyaltyAccount
+├── belongsTo(User)
+└── hasMany(LoyaltyTransaction)
+```
+
+## Best Practices
+
+### 1. Use Eloquent relationships
+
+✅ **Prefer**:
+```php
+$product->brand->name
+$user->loyaltyAccount->points
+```
+
+❌ **Avoid**:
+```php
+Brand::find($product->brand_id)->name
+LoyaltyAccount::where('user_id', $user->id)->first()->points
+```
+
+### 2. Eager loading to avoid N+1
+
+```php
+// ✅ Good - 2 queries
+$products = Product::with(['brand', 'category', 'images'])->get();
+
+// ❌ Bad - 1 + N queries
+$products = Product::all();
+foreach ($products as $product) {
+    echo $product->brand->name; // Query for each product
+}
+```
+
+### 3. Use scopes
+
+```php
+// Defined in Product model
+public function scopePopular($query, int $limit = 10)
+{
+    return $query->orderBy('sales_count', 'desc')->limit($limit);
+}
+
+// Usage
+$popularProducts = Product::popular(5)->get();
+```
+
+### 4. Casts for data types
+
+Swell models already use appropriate casts:
+```php
+protected $casts = [
+    'status' => 'boolean',
+    'price' => 'float',
+    'options' => 'array', // JSON → Array automatic
+    'type' => TransactionType::class, // String → Enum
+];
+```
+
+## Customization
+
+To customize a model:
+
+1. **Add fields**: Create a migration
+2. **Add relationships**: Define them in the model
+3. **Add methods**: Add your business methods
+4. **Add scopes**: For reusable queries
+5. **Add accessors**: For computed attributes
+
+**Example**:
+```php
+// Migration
+Schema::table('products', function (Blueprint $table) {
+    $table->string('barcode')->nullable();
+});
+
+// Product model
+protected $fillable = [..., 'barcode'];
+
+public function isSoldOut(): bool
+{
+    return $this->stock === 0;
+}
+```
+
+<Callout type="info">
+  Consult the [Laravel Eloquent documentation](https://laravel.com/docs/12.x/eloquent) for more details on model customization.
+</Callout>
