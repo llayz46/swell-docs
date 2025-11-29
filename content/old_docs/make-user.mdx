@@ -1,0 +1,55 @@
+---
+title: Créer un utilisateur
+description: Créer un utilisateur avec la commande dédiée de Swell.
+---
+
+## Créer un utilisateur via la CLI
+
+**Swell** propose une commande artisan dédiée pour créer rapidement un utilisateur avec un rôle choisi depuis le terminal. 
+Ceci est particulièrement utile lors de la phase d’installation ou pour tester des fonctionnalités nécessitant un compte.
+
+### Utilisation de la commande
+
+Exécute la commande suivante depuis le CLI de ton projet :
+
+```bash
+php artisan swell:make-user
+```
+
+Cette commande te guide à travers plusieurs questions :
+
+- **Role** (visiteur, client, admin)
+- **Adresse e-mail** de l’utilisateur
+- **Mot de passe** (saisi masqué)
+- **Nom** de l’utilisateur
+
+<Callout>
+    Par défaut, le mot de passe est chiffré et l’utilisateur est immédiatement actif.
+</Callout>
+
+### Exemple d’exécution
+
+```bash
+php artisan swell:make-user
+
+Rôle (visitor/customer/admin) : admin
+Adresse e-mail : admin@exemple.com
+Mot de passe : ********
+Nom : Martin Dupont
+
+Utilisateur créé avec succès !
+```
+
+### Options avancées
+
+Tu peux également passer certains paramètres directement dans la commande :
+
+```bash
+php artisan swell:make-user --email=admin@exemple.com --password=secret --name='Martin Dupont' --role=admin
+```
+
+Cela permet d’automatiser la création d’utilisateurs, par exemple dans des scripts d’installation.
+
+<Callout title="Bon à savoir">
+    Utilise cette commande pour créer rapidement un compte administrateur lors de la première installation de Swell.
+</Callout>

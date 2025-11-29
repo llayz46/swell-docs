@@ -1,0 +1,280 @@
+---
+title: Loyalty System
+description: Loyalty points system in Swell - optional feature enabled via modules.
+---
+
+## Loyalty Points System
+
+**Swell** provides a loyalty points system as an **optional module** allowing customers to earn points for their purchases and use them to get discounts on future orders.
+
+<Callout type="info">
+  The loyalty system is an optional module. See the [Module Management](/modules-management) page to enable it in your installation.
+</Callout>
+
+## Features
+
+- **Automatic points attribution**: Points are automatically awarded when an order is completed
+- **Points expiration**: Points can have a configurable expiration date
+- **Admin adjustments**: Administrators can manually add or remove points
+- **Refunds**: Points are automatically removed when an order is refunded
+- **Transaction history**: Complete tracking of all point transactions
+- **User interface**: Dedicated pages for users and administrators
+
+## Configuration
+
+### Environment Variables
+
+In your `.env` file, configure the following parameters:
+
+```env
+SWELL_LOYALTY_ENABLED=true
+SWELL_LOYALTY_POINTS_PER_EURO=10
+SWELL_LOYALTY_EXPIRATION_DAYS=365
+SWELL_LOYALTY_MIN_REDEEM=100
+SWELL_LOYALTY_MAX_DISCOUNT=50
+```
+
+| Variable                        | Description                                           | Default |
+|---------------------------------|-------------------------------------------------------|---------|
+| `SWELL_LOYALTY_ENABLED`         | Enable/disable the loyalty system                     | `false` |
+| `SWELL_LOYALTY_POINTS_PER_EURO` | Number of points earned per euro spent                | `10`    |
+| `SWELL_LOYALTY_EXPIRATION_DAYS` | Number of days before points expire (null = never)    | `365`   |
+| `SWELL_LOYALTY_MIN_REDEEM`      | Minimum number of points required for redemption      | `100`   |
+| `SWELL_LOYALTY_MAX_DISCOUNT`    | Maximum discount percentage using points              | `50`    |
+
+### Module Activation
+
+1. **Enable the module** in `.env`:
+   ```env
+   SWELL_LOYALTY_ENABLED=true
+   ```
+
+2. **Clear the configuration cache**:
+   ```bash
+   php artisan config:clear
+   ```
+
+3. **Enable the module via Artisan command**:
+   ```bash
+   php artisan swell:enable loyalty
+   ```
+
+This command automatically publishes the necessary migrations.
+
+<Callout type="warning">
+  Before using the loyalty system, ensure it is enabled in your
+  configuration. See [Module Management](/modules-management).
+</Callout>
+
+## Module Architecture
+
+The loyalty system is organized as a module in **Swell**'s architecture. All functionality is centralized in the `app/Modules/Loyalty/` folder which contains:
+
+```
+app/Modules/Loyalty/
+├── Enums/
+│   └── TransactionType.php                    # Transaction types (backed enum)
+├── Models/
+│   ├── LoyaltyAccount.php                     # User loyalty account
+│   └── LoyaltyTransaction.php                 # Points transactions
+├── Services/
+│   └── LoyaltyService.php                     # Business logic + cache invalidation
+├── Http/
+│   ├── Controllers/
+│   │   ├── LoyaltyController.php              # User controller
+│   │   └── Admin/
+│   │       └── AdminLoyaltyController.php     # Admin controller
+│   └── Resources/
+│       ├── LoyaltyAccountResource.php         # Account resource
+│       └── LoyaltyTransactionResource.php     # Transaction resource
+├── database/
+│   └── migrations/                            # Database migrations
+└── LoyaltyServiceProvider.php                 # Service provider
+```
+
+### Data Models
+
+#### LoyaltyAccount
+
+Represents a user's points account.
+
+**Main columns**:
+- `user_id`: User ID
+- `points`: Current available points
+- `lifetime_points`: Total points earned since registration
+
+**Computed accessors**:
+- `available_points`: Non-expired points
+- `expiring_points`: Points expiring in the next 30 days
+
+#### LoyaltyTransaction
+
+Represents a points transaction.
+
+**Main columns**:
+- `loyalty_account_id`: Account ID
+- `type`: Transaction type (enum)
+- `points`: Number of points (positive or negative)
+- `balance_after`: Balance after transaction
+- `description`: Transaction description
+- `order_id`: Order ID (nullable)
+- `expires_at`: Expiration date (nullable)
+
+**Transaction types**:
+- `earned`: Points earned
+- `spent`: Points spent
+- `expired`: Points expired
+- `refunded`: Points refunded
+- `admin_adjustment`: Admin adjustment
+
+## LoyaltyService Service
+
+The main service for managing loyalty points. All operations go through this service which ensures transaction consistency and automatic cache invalidation.
+
+### Main Methods
+
+```php
+use App\Modules\Loyalty\Services\LoyaltyService;
+
+$loyaltyService = app(LoyaltyService::class);
+
+// Create or retrieve an account
+$account = $loyaltyService->getOrCreateAccount($user);
+
+// Award points
+$transaction = $loyaltyService->awardPoints(
+    user: $user,
+    points: 100,
+    description: 'Points earned for purchase',
+    order: $order,           // nullable
+    expiresAt: now()->addYear() // nullable
+);
+
+// Spend points
+$transaction = $loyaltyService->spendPoints(
+    user: $user,
+    points: 50,
+    description: 'Discount applied',
+    order: $order  // nullable
+);
+
+// Calculate points from an order
+$points = $loyaltyService->calculatePointsFromOrder($order);
+
+// Admin adjustment
+$transaction = $loyaltyService->adminAdjustment(
+    user: $user,
+    points: 50,  // can be negative
+    reason: 'Compensation'
+);
+
+// Expire obsolete points
+$count = $loyaltyService->expirePoints();
+```
+
+## Automatic Integration
+
+### Automatic Points Attribution
+
+Points are automatically awarded when an order is completed via Stripe webhook in `HandleCheckoutSessionCompleted`.
+
+The system:
+1. Checks if the loyalty module is enabled
+2. Calculates points based on the order amount
+3. Awards points with an expiration date if configured
+4. Records the transaction linked to the order
+
+### Inertia Shared Props
+
+Loyalty information is available on all pages via `HandleInertiaRequests`:
+
+```typescript
+// Configuration (always available)
+swell.loyalty.enabled: boolean
+swell.loyalty.points_per_euro: number
+swell.loyalty.minimum_redeem_points: number
+
+// User account (only if logged in and module enabled)
+loyaltyAccount: {
+    points: number                // Current points
+    lifetime_points: number       // Total points earned
+    available_points: number      // Non-expired points
+    expiring_points: number       // Points expiring in 30 days
+} | null
+```
+
+The user account is cached for 60 seconds and automatically invalidated on modifications.
+
+## Routes
+
+### User Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/loyalty` | GET | User loyalty page |
+
+### Admin Routes
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/admin/loyalty` | GET | Loyalty accounts list |
+| `/admin/loyalty/{account}` | GET | Account details |
+| `/admin/loyalty/{user}/adjust` | POST | Adjust points |
+| `/admin/loyalty/expire-points` | POST | Expire obsolete points |
+
+## Frontend Pages
+
+### User Page (`/loyalty`)
+
+- Display of current, lifetime, available, and expiring points
+- Explanation of how the system works
+- Complete transaction history
+- Colored badges by transaction type
+
+### Admin Pages
+
+#### Index (`/admin/loyalty`)
+- Global statistics (active accounts, total points, distributed points)
+- Paginated list of all accounts
+- Button to manually expire points
+
+#### Show (`/admin/loyalty/{account}`)
+- Detailed user information
+- Account statistics
+- Manual adjustment form
+- Complete transaction history
+
+## Tests
+
+The system includes comprehensive tests in `tests/Feature/LoyaltyTest.php`.
+
+Run the tests:
+```bash
+php artisan test --filter=LoyaltyTest
+```
+
+## Best Practices
+
+1. **Always use the service**: Never directly modify models, always use `LoyaltyService`
+   - The service ensures data consistency
+   - Cache invalidation is automatic
+   - DB transactions are handled automatically
+
+2. **Use the enum**: Always use `TransactionType::EARNED`, never the string `'earned'`
+
+3. **Clear descriptions**: Provide explicit descriptions for each transaction visible to the user
+
+4. **Error handling**: The service throws `\Exception` exceptions
+   ```php
+   try {
+       $loyaltyService->spendPoints($user, 100, 'Description');
+   } catch (\Exception $e) {
+       return back()->withErrors(['error' => $e->getMessage()]);
+   }
+   ```
+
+<Callout>
+  The loyalty system improves customer engagement and can increase
+  conversions. For more information on activation, see the
+  [module documentation](/modules-management).
+</Callout>

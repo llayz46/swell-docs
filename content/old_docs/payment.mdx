@@ -1,0 +1,237 @@
+---
+title: Paiement Stripe
+description: Système de paiement intégré dans Swell avec Stripe - création de sessions de checkout et gestion des commandes.
+---
+
+## Système de paiement avec Stripe
+
+**Swell** intègre **Stripe** pour gérer les paiements de manière sécurisée avec des sessions de checkout et un suivi complet des commandes.
+
+<Callout type="info">
+  Le système utilise Stripe Checkout pour une expérience de paiement optimisée et sécurisée.
+</Callout>
+
+## Actions de paiement
+
+### Création de session Stripe
+
+**CreateStripeCheckoutSession** - Action principale pour créer les sessions de paiement
+
+```php title="app/Actions/Stripe/CreateStripeCheckoutSession.php"
+public function createSessionFromCart(Cart $cart): Checkout
+{
+    return $cart->user
+        ->allowPromotionCodes()
+        ->checkout(
+            $this->formatCartItems($cart->items),
+            [
+                'customer_update' => [
+                    'shipping' => 'auto'
+                ],
+                'shipping_address_collection' => [
+                    'allowed_countries' => ['FR', 'BE'],
+                ],
+                'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                'metadata' => [
+                    'user_id' => $cart->user->id,
+                    'cart_id' => $cart->id,
+                ],
+            ]
+        );
+}
+
+private function formatCartItems(Collection $items)
+{
+    return $items->loadMissing('product.brand')->map(function (CartItem $item) {
+        return [
+            'price_data' => [
+                'currency' => 'EUR',
+                'unit_amount' => (int) ($item->product->getPrice * 100),
+                'product_data' => [
+                    'name' => $item->product->brand->name . ' ' . $item->product->name,
+                    'description' => $item->product->short_description,
+                    'metadata' => [
+                        'product_id' => $item->product->id
+                    ],
+                ],
+            ],
+            'quantity' => $item->quantity,
+        ];
+    })->toArray();
+}
+
+public function createSessionFromSingleItem(Product $product)
+{
+    return auth()->user()
+        ->allowPromotionCodes()
+        ->checkout(
+            [
+                [
+                    'price_data' => [
+                        'currency' => 'EUR',
+                        'unit_amount' => (int) ($product->getPrice * 100),
+                        'product_data' => [
+                            'name' => $product->brand->name . ' ' . $product->name,
+                            'description' => $product->short_description,
+                            'metadata' => [
+                                'product_id' => $product->id,
+                            ],
+                        ],
+                    ],
+                    'quantity' => 1,
+                ]
+            ],
+            [
+                'customer_update' => [
+                    'shipping' => 'auto',
+                ],
+                'shipping_address_collection' => [
+                    'allowed_countries' => ['FR', 'BE'],
+                ],
+                'success_url' => route('checkout.success') . '?session_id={CHECKOUT_SESSION_ID}',
+                'metadata' => [
+                    'user_id' => auth()->user()->id,
+                ],
+            ]
+        );
+}
+```
+
+### Gestion des commandes complétées
+
+**HandleCheckoutSessionComplete** - Action pour traiter les paiements réussis
+
+```php title="app/Actions/Stripe/HandleCheckoutSessionComplete.php"
+class HandleCheckoutSessionComplete
+{
+    public function handle($sessionId)
+    {
+        DB::transaction(function () use ($sessionId) {
+            $session = Cashier::stripe()->checkout->sessions->retrieve($sessionId);
+            $user = User::find($session->metadata->user_id);
+            $cart = Cart::find($session->metadata->cart_id);
+
+            $order = $user->orders()->create([
+                'stripe_checkout_session_id' => $session->id,
+                'amount_discount' => $session->total_details->amount_discount,
+                'amount_subtotal' => $session->amount_subtotal,
+                'amount_total' => $session->amount_total,
+                'billing_address' => [
+                    'name' => $session->customer_details?->name,
+                    'email' => $session->customer_details?->email,
+                    'city' => $session->customer_details?->address->city,
+                    'country' => $session->customer_details?->address->country,
+                    'line1' => $session->customer_details?->address->line1,
+                    'line2' => $session->customer_details?->address->line2,
+                    'postal_code' => $session->customer_details?->address->postal_code,
+                    'state' => $session->customer_details?->address->state,
+                ],
+                'shipping_address' => [
+                    'name' => $session->shipping_details?->name,
+                    'city' => $session->shipping_details?->address->city,
+                    'country' => $session->shipping_details?->address->country,
+                    'line1' => $session->shipping_details?->address->line1,
+                    'line2' => $session->shipping_details?->address->line2,
+                    'postal_code' => $session->shipping_details?->address->postal_code,
+                    'state' => $session->shipping_details?->address->state,
+                ],
+            ]);
+
+            $lineItems = Cashier::stripe()->checkout->sessions->allLineItems($session->id);
+
+            $orderItems = collect($lineItems->all())->map(function (LineItem $line) use ($order) {
+                $product = Cashier::stripe()->products->retrieve($line->price->product);
+
+                return new OrderItem([
+                    'product_id' => $product->metadata->product_id,
+                    'order_id' => $order->id,
+                    'name' => $product->name,
+                    'description' => $product->description,
+                    'price' => $line->price->unit_amount,
+                    'quantity' => $line->quantity,
+                    'amount_discount' => $line->amount_discount,
+                    'amount_total' => $line->amount_total,
+                ]);
+            });
+
+            $order->items()->saveMany($orderItems);
+
+            if ($cart) {
+                $cart->items()->delete();
+                $cart->delete();
+            }
+        });
+    }
+}
+```
+
+## Contrôleur de paiement
+
+**Checkout** - Méthode pour rédiriger vers la session checkout de Stripe
+
+```php title="app/Http/Controllers/CartController.php"
+public function checkout(CreateStripeCheckoutSession $createStripeCheckoutSession)
+{
+    $session = $createStripeCheckoutSession->createSessionFromCart(CartFactory::make());
+
+    return Inertia::location($session->url);
+}
+```
+
+**Buy** - Méthode pour rédiriger vers la session checkout de Stripe pour un seul produit
+
+```php title="app/Http/Controllers/CartController.php"
+public function buy(Product $product, CreateStripeCheckoutSession $createStripeCheckoutSession)
+{
+    $session = $createStripeCheckoutSession->createSessionFromSingleItem($product);
+
+    return Inertia::location($session->url);
+}
+```
+
+## Listener Stripe
+
+```php title="app/Listeners/StripeEventListener.php"
+class StripeEventListener
+{
+    public function handle(WebhookReceived $event): void
+    {
+        if ($event->payload['type'] === 'checkout.session.completed') {
+            (new HandleCheckoutSessionCompleted())->handle($event->payload['data']['object']['id']);
+        }
+    }
+}
+```
+
+## Configuration Stripe
+
+```bash title=".env"
+# Stripe
+STRIPE_KEY=
+STRIPE_SECRET=
+STRIPE_WEBHOOK_SECRET=
+
+# Cashier
+CASHIER_CURRENCY=eur
+CASHIER_CURRENCY_LOCALE=fr_FR
+```
+
+## Routes
+
+```php title="routes/web.php"
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::prefix('checkout')->group(function () {
+        Route::get('/', [CartController::class, 'checkout'])->name('cart.checkout');
+        Route::get('/success', [CartController::class, 'success'])->name('checkout.success');
+        Route::get('/{product}', [CartController::class, 'buy'])->name('cart.buy');
+    });
+
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+});
+```
+
+<Callout type="warning">
+    N'oubliez pas de configurer l'endpoint webhook dans votre dashboard Stripe pour recevoir les événements de paiement.
+</Callout>
+
+Le système de paiement offre une expérience sécurisée et fluide avec gestion automatique des commandes et synchronisation en temps réel.

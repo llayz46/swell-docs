@@ -35,29 +35,6 @@ Ces commandes vont :
        Pour toute question concernant la configuration de services comme Algolia ou Stripe, référez-vous à la documentation officielle de [Laravel](https://laravel.com/docs).
    </Callout>
 
-### Modules optionnels
-
-**Swell** propose plusieurs modules optionnels que vous pouvez activer selon vos besoins. Configurez-les dans votre fichier `.env` :
-
-```env
-# Modules optionnels
-SWELL_WISHLIST_ENABLED=false
-SWELL_BANNER_ENABLED=false
-SWELL_REVIEW_ENABLED=false
-SWELL_LOYALTY_ENABLED=false
-
-# Configuration du système de fidélité (si activé)
-SWELL_LOYALTY_POINTS_PER_EURO=10
-SWELL_LOYALTY_EXPIRATION_DAYS=365
-SWELL_LOYALTY_MIN_REDEEM=100
-SWELL_LOYALTY_MAX_DISCOUNT=50
-
-# Configuration des commandes
-SWELL_ORDER_PREFIX=ORD
-```
-
-Pour plus d'informations sur les modules, consultez la page [Gestion des modules](/modules-management).
-
 ## Installer les dépendances front-end
 
 ```bash tab="npm"

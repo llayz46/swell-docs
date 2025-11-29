@@ -1,0 +1,60 @@
+---
+title: Architecture
+description: L’organisation des dossiers clés dans Swell.
+---
+
+## Structure des dossiers de l’application
+
+Swell repose sur Laravel et son architecture MVC pour faciliter la prise en main du projet, 
+la personnalisation, et l’extension du projet. Chaque dossier a une responsabilité bien définie
+et peut être adapté selon vos besoins.
+
+## Dossier principaux
+
+### `app/`
+
+Contient la logique Laravel côté serveur : contrôleurs, requêtes, middlewares, etc. 
+**Swell** y ajoute une structure légère autour des contrôleurs d’administration 
+<span className='text-fd-muted-foreground text-sm'>(Http/Controllers/Admin)</span> notamment.
+Sans imposer une architecture rigide.
+
+On retrouve également des dossiers comme **Factories**, utilisés pour centraliser certaines logiques métier réutilisables, 
+contribuant à maintenir une organisation claire et modulaire.
+
+### `resources/js/`
+
+Tout le code frontend est organisé ici, avec une structure pensée pour la lisibilité et la maintenabilité :
+
+- `pages/` : pages Inertia, classées par fonctionnalité 
+<span className='text-fd-muted-foreground text-sm'>(admin/products/, brands/, etc.)</span>.
+- `components/` : Swell regroupe ses composants natifs dans `components/swell/`.
+- `layouts/` : layouts globaux ou spécifiques à certaines sections
+<span className='text-fd-muted-foreground text-sm'>(auth-layout, admin-layout, etc.)</span>.
+- `hooks/`, `context/` : logique réutilisable propre à l’interface ou au comportement utilisateur, 
+intégrée dans certains composants ou pages.
+- `lib/`, `utils/` : fonctions ou modules utilitaires. Swell s’appuie sur ces dossiers pour centraliser 
+certaines logiques récurrentes, sans vous imposer de structure.
+- `types/` : types globaux du projet. Le fichier `index.d.ts` permet de partager les types pour garder une cohérence entre le front-end et le back-end.
+
+<Callout>
+    Swell fournit cette structure pour démarrer rapidement, mais elle reste librement ajustable selon vos besoins ou votre style de développement.
+</Callout>
+
+Cette organisation permet une clarté et une liberté dans le développement frontend, tout en facilitant l’évolution du projet.
+
+### `routes/`
+
+Les routes Laravel sont organisées pour refléter les domaines fonctionnels de l’application :
+
+- `admin.php` : routes liés à l'interface d'administration.
+- `web.php` : routes publiques.
+
+#### Compartimenter ses routes
+
+Pour une meilleure organisation, créez de nouveaux fichiers de routes dans le dossier `routes/` selon vos besoins fonctionnels.
+Importez ensuite ces fichiers dans `web.php` via require ou require_once afin de garder un point d’entrée unique et clair pour vos routes.
+
+<Callout>
+    Cette organisation est optionnelle mais recommandée pour faciliter la maintenance et l’évolution des routes, 
+    surtout dans les projets complexes ou modulaires.
+</Callout>

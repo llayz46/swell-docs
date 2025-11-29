@@ -1,0 +1,156 @@
+---
+title: Recherche Avancée
+description: Système de recherche puissant dans Swell avec Algolia et Laravel Scout - recherche instantanée, filtres avancés et suggestions intelligentes.
+---
+
+## Système de recherche avec Algolia
+
+**Swell** intègre un système de recherche avancé basé sur **Algolia** et **Laravel Scout** pour offrir une expérience de recherche instantanée et pertinente.
+
+<Callout type="info">
+  La recherche utilise l'indexation en temps réel d'Algolia pour des résultats ultra-rapides avec typo-tolerance et suggestions.
+</Callout>
+
+## Configuration Laravel Scout
+
+### Modèles indexés
+
+Les modèles Product sont automatiquement synchronisés avec Algolia :
+
+```php title="app/Models/Product.php"
+use Laravel\Scout\Searchable;
+
+class Product extends Model
+{
+    use Searchable;
+
+    public function shouldBeSearchable(): bool
+    {
+        return $this->status === true;
+    }
+}
+```
+
+### Configuration Algolia
+
+```bash title=".env"
+SCOUT_QUEUE=
+ALGOLIA_APP_ID=
+ALGOLIA_SECRET=
+```
+
+## Contrôleur de recherche
+
+```php title="app/Http/Controllers/ProductController.php"
+public function index(Request $request)
+{
+    // ...
+
+    $search = $request->input('search');
+
+    if ($search) {
+        $products = Product::search($search)
+            ->query(function ($query) use ($in, $out, $sort) {
+                $query->where('status', true)
+                    ->with('featuredImage', 'brand');
+
+                $this->applyStockFilter($query, $in, $out);
+                $this->applySort($query, $sort);
+            })->paginate(16)->withQueryString();
+    }
+
+    // ...
+
+    return Inertia::render('products/index', [
+        'search' => fn () => $search,
+        'data' => fn () => ProductResource::collection($products),
+    ]);
+}
+```
+
+## Interface utilisateur React
+
+### Composants de recherche
+
+**SearchInput** - Barre de recherche principale
+
+```tsx title="resources/js/components/swell/header.tsx"
+const [search, setSearch] = useState<string>(() => new URLSearchParams(window.location.search).get('search') || '');
+
+const debouncedSearch = useMemo(() =>
+    debounce((value) => {
+        router.get(
+            route('product.index'),
+            { search: value },
+            {
+                preserveState: true,
+                replace: true,
+            },
+        );
+    }, 300),
+[]);
+
+const handleChange = (e: { target: { value: SetStateAction<string> } }) => {
+    setSearch(e.target.value);
+    debouncedSearch(e.target.value);
+};
+
+return (
+    // ...
+
+    <form className="relative w-full" onSubmit={(e) => e.preventDefault()}>
+        <Input
+            className="peer sm:min-w-60 ps-9 sm:pe-9"
+            placeholder="Rechercher un produit..."
+            value={search}
+            onChange={handleChange}
+        />
+        <div className="pointer-events-none absolute inset-y-0 start-0 flex 
+            items-center justify-center ps-3 text-muted-foreground/80 peer-disabled:opacity-50">
+            <SearchIcon size={16} />
+        </div>
+    </form>
+
+    // ...
+)
+```
+
+## Optimisations performance
+
+### Côté serveur
+
+- Indexation asynchrone avec queues
+- Mise à jour incrémentale des index
+- Cache des requêtes fréquentes
+- Pagination optimisée
+
+### Côté client
+
+- Debounce des requêtes de recherche
+
+## Commandes Artisan
+
+```bash
+# Indexer tous les produits
+php artisan scout:import "App\Models\Product"
+
+# Vider l'index
+php artisan scout:flush "App\Models\Product"
+
+# Réindexer complètement
+php artisan scout:flush "App\Models\Product"
+php artisan scout:import "App\Models\Product"
+```
+
+<Callout>
+    Plus d'information sur la documentation [Laravel](https://laravel.com/docs/12.x/scout#main-content)
+</Callout>
+
+## Routes API
+
+```php title="routes/web.php"
+Route::get('/products', [ProductController::class, 'index'])->name('product.index');
+```
+
+Le système de recherche offre une expérience utilisateur moderne avec des résultats instantanés et pertinents, 
+optimisant la découverte de produits.

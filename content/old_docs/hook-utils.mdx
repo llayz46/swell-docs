@@ -1,0 +1,73 @@
+---
+title: Hooks personnalisés
+description: Liste et usage des hooks utilitaires personnalisés dans Swell.
+---
+
+# Hooks utilitaires personnalisés
+
+Dans **Swell**, plusieurs hooks React personnalisés sont proposés pour simplifier la gestion de l’état,
+des préférences utilisateur ou de la logique métier côté front. Ces hooks encapsulent des comportements récurrents
+et facilitent la réutilisation du code dans vos composants.
+
+## Liste des hooks principaux
+
+| Hook            | Description                                                                                | Context requis ?        |
+| --------------- | ------------------------------------------------------------------------------------------ | ----------------------- |
+| `useInitials`   | Génère les initiales à partir d’un nom/prénom, pratique pour les avatars utilisateurs.     | Non                     |
+| `useAppearance` | Gère le thème (clair/sombre/système) et la persistance du choix utilisateur.               | Non                     |
+| `useCart`       | Permet d’accéder au panier, d’ajouter/retirer des articles, et de suivre l’état du panier. | Oui (`CartContext`)     |
+| `useWishlist`   | Permet de gérer la wishlist utilisateur (ajout, suppression, récupération).                | Oui (`WishlistContext`) |
+
+<Callout>
+    Certains hooks nécessitent d’être utilisés à l’intérieur de leur provider de context associé (ex : `CartProvider`, `WishlistProvider`, etc.).
+</Callout>
+
+## Exemples d’utilisation
+
+### Récupérer les initiales d’un utilisateur
+
+```ts
+import { useInitials } from "@/hooks/use-initials";
+import type { SharedData } from "@/types";
+import { usePage } from "@inertiajs/react";
+
+const { auth } = usePage<SharedData>().props;
+const initials = useInitials(auth.user.name); // "JD"
+```
+
+### Gérer le thème d’apparence
+
+```ts
+import { useAppearance } from "@/hooks/use-appearance";
+
+const { theme, setTheme } = useAppearance();
+
+// Pour passer en mode sombre :
+setTheme("dark");
+```
+
+### Utiliser le panier (avec context obligatoire)
+
+```ts
+import { useCartContext } from '@/contexts/cart-context';
+// Attention : ce hook doit être utilisé dans <CartProvider>
+
+const { addToCart } = useCartContext();
+const PRODUCT = {...};
+addToCart({ product: PRODUCT, quantity: 2 });
+```
+
+<Callout>
+    Swell est entièrement encapsulée dans le `CartProvider`. Ainsi, tous les composants enfants peuvent utiliser les hooks liés au panier sans configuration supplémentaire.
+</Callout>
+
+## Pourquoi utiliser ces hooks ?
+
+-   **Centralisation de la logique** : La logique métier ou d’UI est factorisée et testable.
+-   **Réutilisabilité** : Les hooks sont utilisables dans n’importe quel composant (sous réserve d’être dans le bon provider).
+-   **Lisibilité** : Le code des composants reste simple et lisible.
+
+<Callout>
+    Pour plus d’exemples ou pour créer vos propres hooks, inspirez-vous de la structure des hooks existants dans le
+    dossier `resources/js/hooks/`.
+</Callout>

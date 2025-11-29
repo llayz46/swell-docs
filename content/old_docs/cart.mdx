@@ -1,0 +1,487 @@
+---
+title: Panier
+description: Système de panier complet dans Swell - gestion pour invités, utilisateurs connectés et transfert automatique lors de la connexion.
+---
+
+## Système de panier complet
+
+**Swell** intègre un système de panier sophistiqué qui gère à la fois les utilisateurs invités et connectés,
+avec un transfert automatique du panier lors de la connexion.
+
+## Architecture du panier
+
+### Modèles de données
+
+Le système de panier repose sur deux modèles principaux :
+
+**Cart :**
+
+```php title="app/Models/Cart.php"
+class Cart extends Model
+{
+    protected $fillable = [
+        'user_id',
+        'session_id',
+    ];
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    public function total(): float
+    {
+        return $this->items->sum(function (CartItem $item) {
+            return ($item->product->discount_price ?? $item->product->price) * $item->quantity;
+        });
+    }
+}
+```
+
+**CartItem :**
+
+```php title="app/Models/CartItem.php"
+class CartItem extends Model
+{
+    protected $fillable = [
+        'product_id',
+        'quantity'
+    ];
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function cart(): BelongsTo
+    {
+        return $this->belongsTo(Cart::class);
+    }
+}
+```
+
+<Callout>
+  Pour plus de détails sur la structure complète des modèles Cart et CartItem,
+  consultez la page [Modèles](/models#cart).
+</Callout>
+
+### Factory de panier
+
+Le `CartFactory` centralise la logique de création et récupération des paniers :
+
+```php title="app/Factories/CartFactory.php"
+class CartFactory
+{
+    public static function make(): Cart
+    {
+        return match(auth()->guest()) {
+            true => Cart::firstOrCreate(['session_id' => session()->getId()]),
+            false => auth()->user()->cart ?: auth()->user()->cart()->create(),
+        };
+    }
+}
+```
+
+## Actions du panier
+
+### Gestion des produits
+
+```php title="app/Actions/Cart/HandleProductCart.php"
+class HandleProductCart
+{
+    public function add($productId, $quantity = 1, $cart = null)
+    {
+        $product = Product::findOrFail($productId);
+
+        if ($product->isOutOfStock()) {
+            throw new \Exception('Produit en rupture de stock.');
+        }
+
+        ($cart ?: CartFactory::make())->items()->firstOrCreate([
+            'product_id' => $productId,
+        ], [
+            'quantity' => 0,
+        ])->increment('quantity', $quantity);
+
+        CartCache::forget();
+    }
+
+    public function remove($productId, $cart = null)
+    {
+        $cart = $cart ?: CartFactory::make();
+
+        $item = $cart->items->first(function ($cartItem) use ($productId) {
+            return $cartItem->product_id === $productId;
+        });
+
+        $item->delete();
+
+        CartCache::forget();
+    }
+
+    public function clear($cart = null)
+    {
+        ($cart ?: CartFactory::make())->items()->delete();
+
+        CartCache::forget();
+    }
+
+    public function increase($productId, $cart = null)
+    {
+        $item = ($cart ?: CartFactory::make())->items->first(function ($cartItem) use ($productId) {
+            return $cartItem->product_id === $productId;
+        });
+
+        $item?->increment('quantity');
+
+        CartCache::forget();
+    }
+
+    public function decrease($productId, $cart = null)
+    {
+        $item = ($cart ?: CartFactory::make())->items->first(function ($cartItem) use ($productId) {
+            return $cartItem->product_id === $productId;
+        });
+
+        if ($item && $item->quantity > 1) {
+            $item->decrement('quantity');
+        } else {
+            $item?->delete();
+        }
+
+        CartCache::forget();
+    }
+}
+```
+
+### Migrer le panier
+
+```php title="app/Actions/Cart/MigrateSessionCart.php"
+class MigrateSessionCart
+{
+    public function migrate(Cart $sessionCart, Cart $userCart)
+    {
+        DB::transaction(function() use ($sessionCart, $userCart) {
+            $sessionItems = $sessionCart->items()->with('product')->get();
+
+            foreach ($sessionItems as $item) {
+                $existingItem = $userCart->items()->where('product_id', $item->product_id)->first();
+
+                if ($existingItem) {
+                    $existingItem->increment('quantity', $item->quantity);
+                } else {
+                    $userCart->items()->create([
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity
+                    ]);
+                }
+            }
+
+            $sessionCart->items()->delete();
+            $sessionCart->delete();
+        });
+    }
+}
+```
+
+### Gestion du Cache
+
+```php title="app/Actions/Cart/CartCache.php"
+class CartCache
+{
+    public static function key(): string
+    {
+        return "cart-" . (auth()->check() ? 'user-' . auth()->id() : 'session-' . session()->getId());
+    }
+
+    public static function forget(): void
+    {
+        Cache::forget(self::key());
+    }
+}
+```
+
+## Contrôleur du panier
+
+```php title="app/Http/Controllers/CartController.php"
+class CartController extends Controller
+{
+    /**
+     * @var HandleProductCart
+     */
+    protected HandleProductCart $handleProductCart;
+
+    /**
+     * CartController constructor.
+     *
+     * @param HandleProductCart $handleProductCart
+     */
+    public function __construct(HandleProductCart $handleProductCart)
+    {
+        $this->handleProductCart = $handleProductCart;
+    }
+
+    /**
+     * Display the cart.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function index()
+    {
+        return response()->json([
+            'cart' => CartResource::make(CartFactory::make()->load('items.product')),
+        ]);
+    }
+
+    /**
+     * Add item to the cart.
+     *
+     * @param Request $request
+     * @param HandleProductCart $handleProductCart
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function addItem(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'integer|min:1',
+        ]);
+
+        try {
+            $this->handleProductCart->add(
+                $request->product_id,
+                $request->quantity ?? 1,
+                $request->user()?->cart
+            );
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors([
+                'product_id' => $e->getMessage()
+            ]);
+        }
+
+        return redirect()->back();
+    }
+
+    /**
+     * Remove an item from the cart.
+     *
+     * @param Request $request
+     * @param HandleProductCart $handleProductCart
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function removeItem(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+        ]);
+
+        $this->handleProductCart->remove(
+            $request->product_id,
+            $request->user()?->cart
+        );
+
+        return redirect()->back();
+    }
+
+    /**
+     * Clear the cart.
+     *
+     * @param Cart $cart
+     * @param HandleProductCart $handleProductCart
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function clear(Request $request)
+    {
+        $this->handleProductCart->clear($request->user()?->cart);
+
+        return redirect()->back();
+    }
+
+    /**
+     * Handle item quantity increase or decrease.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function handleItemQuantity(Request $request)
+    {
+        $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'action' => 'required|in:increase,decrease',
+        ]);
+
+        $cart = $request->user()?->cart;
+
+        if ($request->action === 'increase') {
+            $this->handleProductCart->increase($request->product_id, $cart);
+        } elseif ($request->action === 'decrease') {
+            $this->handleProductCart->decrease($request->product_id, $cart);
+        }
+
+        return redirect()->back();
+    }
+
+    /**
+     * Redirect to Stripe checkout session.
+     *
+     * @param CreateStripeCheckoutSession $createStripeCheckoutSession
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function checkout(CreateStripeCheckoutSession $createStripeCheckoutSession)
+    {
+        $session = $createStripeCheckoutSession->createSessionFromCart(CartFactory::make());
+
+        return Inertia::location($session->url);
+    }
+
+    /**
+     * Redirect to Stripe checkout session for a single product.
+     *
+     * @param Product $product
+     * @param CreateStripeCheckoutSession $createStripeCheckoutSession
+     * @return \Symfony\Component\HttpFoundation\Response
+     */
+    public function buy(Product $product, CreateStripeCheckoutSession $createStripeCheckoutSession)
+    {
+        $session = $createStripeCheckoutSession->createSessionFromSingleItem($product);
+
+        return Inertia::location($session->url);
+    }
+
+    /**
+     * Handle successful checkout.
+     *
+     * @param Request $request
+     * @return \Inertia\Response|\Illuminate\Http\RedirectResponse
+     */
+    public function success(Request $request)
+    {
+        $sessionId = $request->get('session_id');
+
+        if (!$sessionId) {
+            return redirect()->route('home')->withErrors(['session_id' => "L'id de session n'est pas fourni."]);
+        }
+
+        return Inertia::render('checkout/success', [
+            'order' => auth()->user()->orders()->where('stripe_checkout_session_id', $sessionId)->with('items')->firstOrFail(),
+        ]);
+    }
+}
+```
+
+## Transfert automatique lors de la connexion
+
+```php title="app/Http/Requests/Auth/LoginRequest.php"
+public function authenticate(): void
+{
+    $user = User::where('email', $this->input('email'))->first();
+
+    if ($user && \Hash::check($this->input('password'), $user->password)) {
+        (new MigrateSessionCart)->migrate(
+            CartFactory::make(),
+            $user->cart ?: $user->cart()->create()
+        );
+    }
+}
+```
+
+## Ressource API
+
+```php title="app/Http/Resources/CartResource.php"
+class CartResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'items' => CartItemResource::collection($this->items),
+            'total' => $this->total(),
+        ];
+    }
+}
+```
+
+```php title="app/Http/Resources/CartItemResource.php"
+class CartItemResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => $this->id,
+            'quantity' => $this->quantity,
+            'product' => [
+                'id' => $this->product->id,
+                'name' => $this->product->name,
+                'price' => $this->product->getPrice,
+                'image' => new ProductImageResource(
+                    $this->product->images->firstWhere('is_featured', true)
+                ),
+                'brand' => BrandResource::make($this->product->brand),
+            ],
+        ];
+    }
+}
+```
+
+## Middleware de partage global
+
+Le panier est partagé globalement via le middleware `HandleInertiaRequests` :
+
+```php title="app/Http/Middleware/HandleInertiaRequests.php"
+public function share(Request $request): array
+{
+    return [
+        // ... autres données partagées
+        'cart' => fn () => Cache::remember("cart-" . (auth()->check() ? 'user-' . auth()->id() : 'session-' . session()->getId()), 30, function () {
+            return CartResource::make(CartFactory::make()->load('items.product.images', 'items.product.brand'));
+        }),
+    ];
+}
+```
+
+## Interface utilisateur React
+
+### Hook personnalisé pour le panier
+
+**useCart** - Hook principal pour la gestion du panier
+
+- Gère l'état global du panier
+- Fournit les méthodes d'ajout, suppression et modification des quantités
+- Synchronise avec le backend via les API calls
+- Gère le cache local pour les performances
+
+**CartContext** - Contexte React pour partager l'état du panier
+
+- Fournit l'état du panier à tous les composants enfants
+- Gère la persistance des données entre les pages
+- Synchronise automatiquement lors des changements d'authentification
+
+### Composants panier
+
+**cart-sheet** - Composant principal d'affichage du panier
+
+- Affiche la liste complète des articles
+- Gère l'interface de modification des quantités
+- Calcule et affiche le total
+- Boutons d'action (vider, commander)
+
+**cart-clear-confirmation-dialog** - Modal de confirmation pour vider le panier
+
+- Affiche une modale pour confirmer la suppression du panier
+
+## Routes
+
+```php title="routes/web.php"
+Route::prefix('cart')->group(function () {
+    Route::get('/', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/add', [CartController::class, 'addItem'])->name('cart.add');
+    Route::post('/remove', [CartController::class, 'removeItem'])->name('cart.remove');
+    Route::post('/clear/{cart}', [CartController::class, 'clear'])->name('cart.clear');
+    Route::put('/update', [CartController::class, 'handleItemQuantity'])->name('cart.update');
+});
+```

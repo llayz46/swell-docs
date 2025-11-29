@@ -1,0 +1,281 @@
+---
+title: Système de fidélité
+description: Système de points de fidélité dans Swell - fonctionnalité optionnelle activable via les modules.
+---
+
+## Système de points de fidélité
+
+**Swell** propose un système de points de fidélité en tant que **module optionnel** permettant aux clients de gagner des points pour leurs achats et de les utiliser pour obtenir des réductions sur leurs futures commandes.
+
+<Callout type="info">
+  Le système de fidélité est un module optionnel. Consultez la page [Gestion des
+  Modules](/modules-management) pour l'activer dans votre installation.
+</Callout>
+
+## Caractéristiques
+
+- **Attribution automatique de points** : Les points sont automatiquement attribués lors de la finalisation d'une commande
+- **Expiration des points** : Les points peuvent avoir une date d'expiration configurable
+- **Ajustements administratifs** : Les administrateurs peuvent ajouter ou retirer des points manuellement
+- **Remboursements** : Les points sont automatiquement retirés lors du remboursement d'une commande
+- **Historique des transactions** : Suivi complet de toutes les transactions de points
+- **Interface utilisateur** : Pages dédiées pour les utilisateurs et les administrateurs
+
+## Configuration
+
+### Variables d'environnement
+
+Dans votre fichier `.env`, configurez les paramètres suivants :
+
+```env
+SWELL_LOYALTY_ENABLED=true
+SWELL_LOYALTY_POINTS_PER_EURO=10
+SWELL_LOYALTY_EXPIRATION_DAYS=365
+SWELL_LOYALTY_MIN_REDEEM=100
+SWELL_LOYALTY_MAX_DISCOUNT=50
+```
+
+| Variable                        | Description                                                 | Défaut  |
+|---------------------------------|-------------------------------------------------------------|---------|
+| `SWELL_LOYALTY_ENABLED`         | Active/désactive le système de fidélité                     | `false` |
+| `SWELL_LOYALTY_POINTS_PER_EURO` | Nombre de points gagnés par euro dépensé                    | `10`    |
+| `SWELL_LOYALTY_EXPIRATION_DAYS` | Nombre de jours avant expiration des points (null = jamais) | `365`   |
+| `SWELL_LOYALTY_MIN_REDEEM`      | Nombre minimum de points pour une utilisation               | `100`   |
+| `SWELL_LOYALTY_MAX_DISCOUNT`    | Pourcentage maximum de réduction avec les points            | `50`    |
+
+### Activation du module
+
+1. **Activez le module** dans `.env` :
+   ```env
+   SWELL_LOYALTY_ENABLED=true
+   ```
+
+2. **Videz le cache de configuration** :
+   ```bash
+   php artisan config:clear
+   ```
+
+3. **Activez le module via la commande Artisan** :
+   ```bash
+   php artisan swell:enable loyalty
+   ```
+
+Cette commande publie automatiquement les migrations nécessaires.
+
+<Callout type="warning">
+  Avant d'utiliser le système de fidélité, assurez-vous qu'il est activé dans votre
+  configuration. Voir [Gestion des Modules](/modules-management).
+</Callout>
+
+## Architecture du module
+
+Le système de fidélité est organisé sous forme de module dans l'architecture **Swell**. Toute la fonctionnalité est centralisée dans le dossier `app/Modules/Loyalty/` qui contient :
+
+```
+app/Modules/Loyalty/
+├── Enums/
+│   └── TransactionType.php                    # Types de transactions (enum backed)
+├── Models/
+│   ├── LoyaltyAccount.php                     # Compte de fidélité utilisateur
+│   └── LoyaltyTransaction.php                 # Transactions de points
+├── Services/
+│   └── LoyaltyService.php                     # Logique métier + invalidation cache
+├── Http/
+│   ├── Controllers/
+│   │   ├── LoyaltyController.php              # Contrôleur utilisateur
+│   │   └── Admin/
+│   │       └── AdminLoyaltyController.php     # Contrôleur admin
+│   └── Resources/
+│       ├── LoyaltyAccountResource.php         # Resource pour compte
+│       └── LoyaltyTransactionResource.php     # Resource pour transaction
+├── database/
+│   └── migrations/                            # Migrations de base de données
+└── LoyaltyServiceProvider.php                 # Service provider
+```
+
+### Modèles de données
+
+#### LoyaltyAccount
+
+Représente le compte de points d'un utilisateur.
+
+**Colonnes principales** :
+- `user_id` : ID de l'utilisateur
+- `points` : Points actuels disponibles
+- `lifetime_points` : Total des points gagnés depuis l'inscription
+
+**Accesseurs calculés** :
+- `available_points` : Points non expirés
+- `expiring_points` : Points expirant dans les 30 prochains jours
+
+#### LoyaltyTransaction
+
+Représente une transaction de points.
+
+**Colonnes principales** :
+- `loyalty_account_id` : ID du compte
+- `type` : Type de transaction (enum)
+- `points` : Nombre de points (positif ou négatif)
+- `balance_after` : Solde après la transaction
+- `description` : Description de la transaction
+- `order_id` : ID de la commande (nullable)
+- `expires_at` : Date d'expiration (nullable)
+
+**Types de transactions** :
+- `earned` : Points gagnés
+- `spent` : Points dépensés
+- `expired` : Points expirés
+- `refunded` : Points remboursés
+- `admin_adjustment` : Ajustement administrateur
+
+## Service LoyaltyService
+
+Le service principal pour gérer les points de fidélité. Toutes les opérations passent par ce service qui garantit la cohérence des transactions et l'invalidation automatique du cache.
+
+### Méthodes principales
+
+```php
+use App\Modules\Loyalty\Services\LoyaltyService;
+
+$loyaltyService = app(LoyaltyService::class);
+
+// Créer ou récupérer un compte
+$account = $loyaltyService->getOrCreateAccount($user);
+
+// Attribuer des points
+$transaction = $loyaltyService->awardPoints(
+    user: $user,
+    points: 100,
+    description: 'Points gagnés pour achat',
+    order: $order,           // nullable
+    expiresAt: now()->addYear() // nullable
+);
+
+// Dépenser des points
+$transaction = $loyaltyService->spendPoints(
+    user: $user,
+    points: 50,
+    description: 'Réduction appliquée',
+    order: $order  // nullable
+);
+
+// Calculer les points d'une commande
+$points = $loyaltyService->calculatePointsFromOrder($order);
+
+// Ajustement administrateur
+$transaction = $loyaltyService->adminAdjustment(
+    user: $user,
+    points: 50,  // peut être négatif
+    reason: 'Compensation'
+);
+
+// Expirer les points obsolètes
+$count = $loyaltyService->expirePoints();
+```
+
+## Intégration automatique
+
+### Attribution automatique de points
+
+Les points sont automatiquement attribués lors de la finalisation d'une commande via Stripe webhook dans `HandleCheckoutSessionCompleted`.
+
+Le système :
+1. Vérifie si le module de fidélité est activé
+2. Calcule les points basés sur le montant de la commande
+3. Attribue les points avec une date d'expiration si configurée
+4. Enregistre la transaction liée à la commande
+
+### Props partagés Inertia
+
+Les informations de fidélité sont disponibles sur toutes les pages via `HandleInertiaRequests` :
+
+```typescript
+// Configuration (toujours disponible)
+swell.loyalty.enabled: boolean
+swell.loyalty.points_per_euro: number
+swell.loyalty.minimum_redeem_points: number
+
+// Compte utilisateur (uniquement si connecté et module activé)
+loyaltyAccount: {
+    points: number                // Points actuels
+    lifetime_points: number       // Points totaux gagnés
+    available_points: number      // Points non expirés
+    expiring_points: number       // Points expirant dans 30 jours
+} | null
+```
+
+Le compte utilisateur est mis en cache 60 secondes et automatiquement invalidé lors des modifications.
+
+## Routes
+
+### Routes utilisateur
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/loyalty` | GET | Page de fidélité utilisateur |
+
+### Routes administrateur
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/admin/loyalty` | GET | Liste des comptes de fidélité |
+| `/admin/loyalty/{account}` | GET | Détails d'un compte |
+| `/admin/loyalty/{user}/adjust` | POST | Ajuster les points |
+| `/admin/loyalty/expire-points` | POST | Expirer les points obsolètes |
+
+## Pages Frontend
+
+### Page utilisateur (`/loyalty`)
+
+- Affichage des points actuels, à vie, disponibles et expirant
+- Explication du fonctionnement du système
+- Historique complet des transactions
+- Badges colorés par type de transaction
+
+### Pages administrateur
+
+#### Index (`/admin/loyalty`)
+- Statistiques globales (comptes actifs, points totaux, points distribués)
+- Liste paginée de tous les comptes
+- Bouton pour expirer manuellement les points
+
+#### Show (`/admin/loyalty/{account}`)
+- Informations détaillées de l'utilisateur
+- Statistiques du compte
+- Formulaire d'ajustement manuel
+- Historique complet des transactions
+
+## Tests
+
+Le système inclut des tests complets dans `tests/Feature/LoyaltyTest.php`.
+
+Exécuter les tests :
+```bash
+php artisan test --filter=LoyaltyTest
+```
+
+## Bonnes pratiques
+
+1. **Toujours utiliser le service** : Ne modifiez jamais directement les modèles, utilisez toujours `LoyaltyService`
+   - Le service garantit la cohérence des données
+   - L'invalidation du cache est automatique
+   - Les transactions DB sont gérées automatiquement
+
+2. **Utilisation de l'enum** : Utilisez toujours `TransactionType::EARNED`, jamais les chaînes `'earned'`
+
+3. **Descriptions claires** : Fournissez des descriptions explicites pour chaque transaction visibles par l'utilisateur
+
+4. **Gestion des erreurs** : Le service lance des exceptions `\Exception`
+   ```php
+   try {
+       $loyaltyService->spendPoints($user, 100, 'Description');
+   } catch (\Exception $e) {
+       return back()->withErrors(['error' => $e->getMessage()]);
+   }
+   ```
+
+<Callout>
+  Le système de fidélité améliore l'engagement client et peut augmenter les
+  conversions. Pour plus d'informations sur l'activation, consultez la
+  [documentation des modules](/modules-management).
+</Callout>

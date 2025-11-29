@@ -1,0 +1,196 @@
+---
+title: Modèles
+description: Les modèles dans Swell, adaptez-les à votre projet.
+---
+
+## Les modèles de données
+
+Swell propose une collection de modèles prêts à l’emploi, conçus pour couvrir les besoins courants d’un projet e-commerce moderne.
+
+Ces modèles servent de base solide, mais restent entièrement personnalisables afin de s’adapter à la structure et aux spécificités
+de votre application.
+
+Vous pouvez ainsi les modifier ou en créer de nouveaux selon les exigences de votre domaine métier,
+tout en profitant d’une intégration fluide avec l’écosystème Swell.
+
+## Adapter un modèle
+
+Les modèles **Swell** sont basiquement situés dans le dossier `app/Models`, à l’exception des fonctionnalités
+optionnelles dont les modèles sont placés dans `app/Modules/Feature/Models`.
+
+Ils sont associés à leurs fichiers de migration respectifs dans `database/migrations` ou
+`Modules/Feature/database/migrations`, permettant de définir la structure des tables correspondantes.
+
+<Callout>
+  Swell n’impose aucune logique métier. Les modèles proposés servent de socle
+  initial, à adapter librement. Pour toute modification de structure ou
+  comportement, référez-vous à la documentation officielle de
+  [Laravel](https://laravel.com/docs/12.x/eloquent).
+</Callout>
+
+## Structure des modèles
+
+### Brand
+
+| Champ      | Type                |
+| ---------- | ------------------- |
+| `name`     | `string`            |
+| `slug`     | `string` `unique`   |
+| `logo_url` | `string` `nullable` |
+
+<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+
+### Category
+
+| Champ         | Type                      |
+| ------------- | ------------------------- |
+| `name`        | `string`                  |
+| `slug`        | `string` `unique`         |
+| `description` | `text` `nullable`         |
+| `status`      | `boolean` `defaut:true`   |
+| `parent_id`   | `nullable` `nullOnDelete` |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Category).</span> <br />
+<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+
+### Product
+
+| Champ               | Type                                |
+| ------------------- | ----------------------------------- |
+| `name`              | `string`                            |
+| `slug`              | `string` `unique` `nullable`        |
+| `sku`               | `string` `unique`                   |
+| `description`       | `text`                              |
+| `short_description` | `string` `max:500`                  |
+| `price`             | `decimal:10,2`                      |
+| `discount_price`    | `decimal:10,2`                      |
+| `cost_price`        | `decimal:10,2`                      |
+| `stock`             | `unsignedInteger` `default:0`       |
+| `reorder_level`     | `unsignedInteger` `default:10`      |
+| `sales_count`       | `unsignedInteger` `default:0`       |
+| `status`            | `boolean` `default:true`            |
+| `meta_title`        | `string` `nullable`                 |
+| `meta_description`  | `string` `max:255` `nullable`       |
+| `meta_keywords`     | `string` `max:255` `nullable`       |
+| `brand_id`          | `integer` `restrictOnDelete`        |
+| `category_id`       | `integer` `nullOnDelete`            |
+| `collection_id`     | `integer` `nullable` `nullOnDelete` |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Category).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Brand).</span> <br />
+<span className="text-fd-muted-foreground text-sm">HasMany(ProductImage).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Collection).</span> <br />
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Wishlist).
+</span> <br />
+<span className="text-fd-muted-foreground text-sm">HasMany(Comment).</span>
+
+### Collection
+
+| Champ   | Type              |
+| ------- | ----------------- |
+| `title` | `string`          |
+| `slug`  | `string` `unique` |
+
+<span className="text-fd-muted-foreground text-sm">HasMany(Product).</span>
+
+<Callout>
+  Collection permet d’associer plusieurs produits entre eux au sein d’une même
+  collection.
+</Callout>
+
+### ProductImage
+
+| Champ         | Type                      |
+| ------------- | ------------------------- |
+| `image_url`   | `string`                  |
+| `alt_text`    | `string` `nullable`       |
+| `is_featured` | `boolean` `default:false` |
+| `order`       | `unsignedInteger`         |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+
+### Review
+
+| Champ        | Type                              |
+| ------------ | --------------------------------- |
+| `title`      | `string`                          |
+| `comment`    | `text` `nullable`                 |
+| `rating`     | `unsignedTinyInteger` `default:0` |
+| `user_id`    | `integer` `cascadeOnDelete`       |
+| `product_id` | `integer` `cascadeOnDelete`       |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+
+### Cart
+
+| Champ        | Type                                   |
+| ------------ | -------------------------------------- |
+| `session_id` | `string` `nullable`                    |
+| `user_id`    | `integer` `nullable` `cascadeOnDelete` |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
+<span className="text-fd-muted-foreground text-sm">HasMany(CartItem).</span>
+
+### CartItem
+
+| Champ        | Type                          |
+| ------------ | ----------------------------- |
+| `cart_id`    | `integer` `cascadeOnDelete`   |
+| `product_id` | `integer` `cascadeOnDelete`   |
+| `quantity`   | `unsignedInteger` `default:1` |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Cart).</span>
+
+### Wishlist
+
+| Champ     | Type                        |
+| --------- | --------------------------- |
+| `user_id` | `integer` `cascadeOnDelete` |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span> <br />
+<span className="text-fd-muted-foreground text-sm">
+  BelongsToMany(Product).
+</span>
+
+### Order
+
+| Champ                        | Type                        |
+| ---------------------------- | --------------------------- |
+| `order_number`               | `string` `unique`           |
+| `stripe_checkout_session_id` | `string`                    |
+| `amount_discount`            | `unsignedInteger`           |
+| `amount_subtotal`            | `unsignedInteger`           |
+| `amount_total`               | `unsignedInteger`           |
+| `billing_address`            | `json`                      |
+| `shipping_address`           | `json`                      |
+| `user_id`                    | `integer` `cascadeOnDelete` |
+
+<span className="text-fd-muted-foreground text-sm">HasMany(OrderItem).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(User).</span>
+
+### OrderItem
+
+| Champ             | Type              |
+| ----------------- | ----------------- |
+| `name`            | `string`          |
+| `description`     | `text`            |
+| `price`           | `unsignedInteger` |
+| `quantity`        | `unsignedInteger` |
+| `amount_discount` | `unsignedInteger` |
+| `amount_total`    | `unsignedInteger` |
+| `order_id`        | `integer`         |
+| `product_id`      | `integer`         |
+
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Order).</span> <br />
+<span className="text-fd-muted-foreground text-sm">BelongsTo(Product).</span>
+
+### Banner
+
+| Champ       | Type                          |
+| ----------- | ----------------------------- |
+| `message`   | `string`                      |
+| `is_active` | `boolean`                     |
+| `order`     | `unsignedInteger` `default:0` |

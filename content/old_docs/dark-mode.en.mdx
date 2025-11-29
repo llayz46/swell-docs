@@ -1,0 +1,73 @@
+---
+title: Theme Management
+description: Dark and light theme system in Swell - automatic and manual switching with user preference persistence.
+---
+
+## Adaptive theme system
+
+**Swell** integrates a complete theme system that allows users to switch between dark and light modes, with automatic system preference detection and local persistence.
+
+<Callout type="info">
+  The theme system uses CSS variables and Tailwind CSS for smooth transitions between modes.
+</Callout>
+
+## System architecture
+
+### Theme management hook
+
+**useAppearance** - Main hook for theme management
+
+- Automatic system preference detection
+- localStorage persistence
+- Cross-tab synchronization
+- Smooth transitions between modes
+
+### Interface components
+
+**AppearanceTabs** - Theme switching button
+
+- Intuitive interface with icons
+- Visual states for each mode
+- Transition animation
+- System mode support
+
+## CSS configuration
+
+### Theme variables
+
+The system uses CSS variables to define colors:
+
+```css title="globals.css"
+:root {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+}
+```
+
+## Advanced features
+
+### System detection
+
+- Listens to system preference changes
+- Automatic updates in 'system' mode
+- Respects accessibility preferences
+
+### Persistence
+
+- localStorage saving
+- Cross-tab/window synchronization
+- Restoration on page reload
+
+### Performance
+
+- Optimized style loading
+- Performant CSS transitions

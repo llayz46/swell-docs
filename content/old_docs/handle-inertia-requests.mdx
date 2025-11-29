@@ -1,0 +1,98 @@
+---
+title: HandleInertiaRequests
+description: Personnalisation du partage de données globales avec Inertia dans Swell.
+---
+
+## Rappel rapide : le middleware Inertia
+
+Par défaut, la méthode `share` du middleware `HandleInertiaRequests` permet de définir les données accessibles sur toutes les pages côté front. On peut y injecter des variables, des callbacks, ou même des closures pour du lazy loading.
+
+## Personnaliser le middleware dans Swell
+
+Dans **Swell**, la méthode `share` a été largement personnalisée pour répondre aux besoins de l’application.
+Voici ce qui est partagé :
+
+```php title="app/Http/Middleware/HandleInertiaRequests.php"
+public function share(Request $request): array
+{
+    return [
+        ...parent::share($request),
+        'name' => config('app.name'),
+        'swell' => [
+            'wishlist' => [
+                'enabled' => config('swell.wishlist.enabled', true),
+            ],
+            'banner' => [
+                'enabled' => config('swell.banner.enabled', true),
+            ]
+        ],
+        'auth' => [
+            'user' => fn () => $request->user()?->with('roles')->first(),
+        ],
+        'ziggy' => fn (): array => [
+            ...(new Ziggy)->toArray(),
+            'location' => $request->url(),
+        ],
+        'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        'categories' => fn () => Cache::rememberForever('categories', fn () => CategoryResource::collection(Category::with(['childrenRecursive' => fn($q) => $q->withCount('products')])->withCount('products')->whereNull('parent_id')->get())),
+        'cart' => fn () => Cache::remember("cart-" . (auth()->check() ? 'user-' . auth()->id() : 'session-' . session()->getId()), 30, function () {
+            return CartResource::make(CartFactory::make()->load('items.product.images', 'items.product.brand'));
+        }),
+        'infoBanner' => fn () => config('swell.banner.enabled', true) ? Cache::rememberForever('infoBanner', fn () => BannerMessage::orderBy('order')->get()) : [],
+    ];
+}
+```
+
+### Détail des données partagées
+
+| Propriété     | Description                                                                                                             |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `name`        | Le nom de l’application, injecté depuis la config.                                                                      |
+| `swell`       | Un tableau de fonctionnalités activables (wishlist, banner), pour piloter dynamiquement le front.                       |
+| `auth.user`   | L’utilisateur connecté, avec ses rôles, chargé à la demande (closure pour éviter des requêtes inutiles si non utilisé). |
+| `ziggy`       | Les routes front générées par Ziggy, avec la location courante.                                                         |
+| `sidebarOpen` | État d’ouverture de la sidebar, basé sur un cookie.                                                                     |
+| `categories`  | Les catégories principales, avec leurs enfants et le nombre de produits, mises en cache pour de meilleures perfs.       |
+| `cart`        | Le panier de l’utilisateur (ou de la session), également mis en cache.                                                  |
+| `infoBanner`  | Les messages de bannière d’info, récupérés et mis en cache si la fonctionnalité est activée.                            |
+
+### Pourquoi ces choix ?
+
+-   **Closures** : Permettent de ne charger les données que si elles sont utilisées côté front (lazy loading).
+-   **Cache** : Optimise les performances pour les données lourdes ou peu changeantes (catégories, bannières, panier).
+
+## Typage côté front : SharedData
+
+Pour garantir la cohérence entre le backend et le frontend, il est important d’adapter le typage du côté front (typiquement le type `SharedData` dans ton code TypeScript). Chaque clé partagée ici doit être déclarée et typée côté front pour bénéficier de l’autocomplétion et éviter les erreurs.
+
+<Callout>Pensez à mettre à jour le type `SharedData` à chaque ajout/modification dans le middleware.</Callout>
+
+## Exemple d’utilisation côté front : récupérer l’utilisateur connecté
+
+Voici comment accéder à l’utilisateur connecté dans un composant React avec Inertia.js :
+
+```ts
+import type { SharedData } from "@/types";
+import { Link, usePage } from '@inertiajs/react';
+
+export default function Exemple() {
+    const { auth } = usePage<SharedData>().props;
+
+    return (
+        <div>
+            {auth.user ? (
+                <UserDropdown user={auth.user} />
+            ) : (
+                <Link href="/login">
+                    <User size={20} />
+                </Link>
+            )}
+        </div>
+    );
+}
+```
+
+<Callout>
+    Pour plus d'info sur le middleware HandleInertiaRequests. Voir la documentation de
+    [Inertia](https://inertiajs.com/shared-data).
+</Callout>
