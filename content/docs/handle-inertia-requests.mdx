@@ -24,10 +24,18 @@ public function share(Request $request): array
             ],
             'banner' => [
                 'enabled' => config('swell.banner.enabled', true),
+            ],
+            'review' => [
+                'enabled' => config('swell.review.enabled', true),
+            ],
+            'loyalty' => [
+                'enabled' => config('swell.loyalty.enabled', false),
+                'points_per_euro' => config('swell.loyalty.points_per_euro', 10),
+                'minimum_redeem_points' => config('swell.loyalty.minimum_redeem_points', 100),
             ]
         ],
         'auth' => [
-            'user' => fn () => $request->user()?->with('roles')->first(),
+            'user' => fn () => $request->user()?->load('roles'),
         ],
         'ziggy' => fn (): array => [
             ...(new Ziggy)->toArray(),
@@ -36,7 +44,7 @@ public function share(Request $request): array
         'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         'categories' => fn () => Cache::rememberForever('categories', fn () => CategoryResource::collection(Category::with(['childrenRecursive' => fn($q) => $q->withCount('products')])->withCount('products')->whereNull('parent_id')->get())),
         'cart' => fn () => Cache::remember("cart-" . (auth()->check() ? 'user-' . auth()->id() : 'session-' . session()->getId()), 30, function () {
-            return CartResource::make(CartFactory::make()->load('items.product.images', 'items.product.brand'));
+            return CartResource::make(CartFactory::make()->load('items.product.images', 'items.product.brand', 'items.product.options.values'));
         }),
         'infoBanner' => fn () => config('swell.banner.enabled', true) ? Cache::rememberForever('infoBanner', fn () => BannerMessage::orderBy('order')->get()) : [],
     ];
@@ -48,7 +56,7 @@ public function share(Request $request): array
 | Propriété     | Description                                                                                                             |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `name`        | Le nom de l’application, injecté depuis la config.                                                                      |
-| `swell`       | Un tableau de fonctionnalités activables (wishlist, banner), pour piloter dynamiquement le front.                       |
+| `swell`       | Un tableau de fonctionnalités activables (wishlist, banner, review, loyalty), pour piloter dynamiquement le front.      |
 | `auth.user`   | L’utilisateur connecté, avec ses rôles, chargé à la demande (closure pour éviter des requêtes inutiles si non utilisé). |
 | `ziggy`       | Les routes front générées par Ziggy, avec la location courante.                                                         |
 | `sidebarOpen` | État d’ouverture de la sidebar, basé sur un cookie.                                                                     |
@@ -58,8 +66,8 @@ public function share(Request $request): array
 
 ### Pourquoi ces choix ?
 
--   **Closures** : Permettent de ne charger les données que si elles sont utilisées côté front (lazy loading).
--   **Cache** : Optimise les performances pour les données lourdes ou peu changeantes (catégories, bannières, panier).
+- **Closures** : Permettent de ne charger les données que si elles sont utilisées côté front (lazy loading).
+- **Cache** : Optimise les performances pour les données lourdes ou peu changeantes (catégories, bannières, panier).
 
 ## Typage côté front : SharedData
 
@@ -92,7 +100,4 @@ export default function Exemple() {
 }
 ```
 
-<Callout>
-    Pour plus d'info sur le middleware HandleInertiaRequests. Voir la documentation de
-    [Inertia](https://inertiajs.com/shared-data).
-</Callout>
+<Callout>Pour plus d'info sur le middleware HandleInertiaRequests. Voir la documentation de [Inertia](https://inertiajs.com/shared-data).</Callout>
