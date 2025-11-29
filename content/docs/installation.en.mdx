@@ -86,7 +86,7 @@ php artisan migrate
 
 php artisan db:seed --class=RoleSeeder
 
-php artisan db:seed --class=LocalSeeder
+php artisan db:seed --class=ProdSeeder
 ```
 
 Or, if you prefer, you can use the following command:
@@ -113,14 +113,14 @@ Then access [http://localhost:8000](http://localhost:8000).
 
 ## Log into the application
 
-After installation, the LocalSeeder will automatically create an administrator user.  
+After installation, the ProdSeeder will automatically create an administrator user.  
 The default credentials are:
 
 - **Email**: john@doe.com
 - **Password**: password
 
 <Callout>
-    You can modify the account information directly in the `LocalSeeder`. See the documentation on [seeders](/seeders).
+    You can modify the account information directly in the `ProdSeeder`. See the documentation on [seeders](/seeders).
 </Callout>
 
 ## Going further
