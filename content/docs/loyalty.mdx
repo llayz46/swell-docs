@@ -27,7 +27,7 @@ description: Système de points de fidélité dans Swell - fonctionnalité optio
 
 Dans votre fichier `.env`, configurez les paramètres suivants :
 
-```bash
+```env
 SWELL_LOYALTY_ENABLED=true
 SWELL_LOYALTY_POINTS_PER_EURO=10
 SWELL_LOYALTY_EXPIRATION_DAYS=365
@@ -46,7 +46,7 @@ SWELL_LOYALTY_MAX_DISCOUNT=50
 ### Activation du module
 
 1. **Activez le module** dans `.env` :
-   ```bash
+   ```env
    SWELL_LOYALTY_ENABLED=true
    ```
 
@@ -105,7 +105,6 @@ Représente le compte de points d'un utilisateur.
 - `lifetime_points` : Total des points gagnés depuis l'inscription
 
 **Accesseurs calculés** :
-- `available_points` : Points non expirés
 - `expiring_points` : Points expirant dans les 30 prochains jours
 
 #### LoyaltyTransaction
@@ -197,9 +196,8 @@ swell.loyalty.minimum_redeem_points: number
 
 // Compte utilisateur (uniquement si connecté et module activé)
 loyaltyAccount: {
-    points: number                // Points actuels
+    points: number                // Points actuels (solde disponible)
     lifetime_points: number       // Points totaux gagnés
-    available_points: number      // Points non expirés
     expiring_points: number       // Points expirant dans 30 jours
 } | null
 ```
