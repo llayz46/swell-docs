@@ -487,17 +487,14 @@ export function CartSheet() {
     const { confirm } = useConfirmContext();
 
     const handleClearCart = async () => {
-        const confirmed = await confirm({
+        await confirm({
             title: 'Clear cart confirmation',
             description: 'Are you sure you want to clear your cart?',
             confirmText: 'Clear cart',
             cancelText: 'Cancel',
             variant: 'destructive',
+            onConfirm: clearCart
         });
-
-        if (confirmed) {
-            clearCart();
-        }
     };
 
     // ... rest of the component

@@ -487,17 +487,14 @@ export function CartSheet() {
     const { confirm } = useConfirmContext();
 
     const handleClearCart = async () => {
-        const confirmed = await confirm({
+        await confirm({
             title: 'Confirmation de la suppression du panier',
             description: 'Êtes-vous sûr de vouloir vider votre panier ?',
             confirmText: 'Vider le panier',
             cancelText: 'Annuler',
             variant: 'destructive',
+            onConfirm: clearCart
         });
-
-        if (confirmed) {
-            clearCart();
-        }
     };
 
     // ... reste du composant
