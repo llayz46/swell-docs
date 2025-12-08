@@ -1,30 +1,32 @@
 ---
-title: Custom hooks
-description: List and usage of custom utility hooks in Swell.
+title: Hooks personnalisés
+description: Liste et usage des hooks utilitaires personnalisés dans Swell.
 ---
 
-## Custom utility hooks
+## Hooks utilitaires personnalisés
 
-In **Swell**, several custom React hooks are provided to simplify state management,
-user preferences or business logic on the frontend. These hooks encapsulate recurring behaviors
-and facilitate code reuse in your components.
+Dans **Swell**, plusieurs hooks React personnalisés sont proposés pour simplifier la gestion de l'état,
+des préférences utilisateur ou de la logique métier côté front. Ces hooks encapsulent des comportements récurrents
+et facilitent la réutilisation du code dans vos composants.
 
-## List of main hooks
+## Liste des hooks principaux
 
-| Hook            | Description                                                                                | Context required?       |
+| Hook            | Description                                                                                | Context requis ?        |
 | --------------- | ------------------------------------------------------------------------------------------ | ----------------------- |
-| `useInitials`   | Generates initials from a first/last name, useful for user avatars.                       | No                      |
-| `useAppearance` | Manages theme (light/dark/system) and user choice persistence.                            | No                      |
-| `useCart`       | Allows access to cart, add/remove items, and track cart state.                            | Yes (`CartContext`)     |
-| `useWishlist`   | Allows managing user wishlist (add, remove, retrieve).                                    | Yes (`WishlistContext`) |
+| `useInitials`   | Génère les initiales à partir d'un nom/prénom, pratique pour les avatars utilisateurs.     | Non                     |
+| `useAppearance` | Gère le thème (clair/sombre/système) et la persistance du choix utilisateur.               | Non                     |
+| `useActiveNav`  | Détermine si un élément de navigation est actif en fonction de l'URL actuelle.             | Non                     |
+| `useCart`       | Permet d'accéder au panier, d'ajouter/retirer des articles, et de suivre l'état du panier. | Oui (`CartContext`)     |
+| `useWishlist`   | Permet de gérer la wishlist utilisateur (ajout, suppression, récupération).                | Oui (`WishlistContext`) |
+| `useConfirm`    | Affiche une modale de confirmation et retourne une promesse avec la réponse utilisateur.   | Oui (`ConfirmContext`)  |
 
 <Callout>
-    Some hooks need to be used inside their associated context provider (e.g.: `CartProvider`, `WishlistProvider`, etc.).
+    Certains hooks nécessitent d'être utilisés à l'intérieur de leur provider de context associé (ex : `CartProvider`, `WishlistProvider`, etc.).
 </Callout>
 
-## Usage examples
+## Exemples d'utilisation
 
-### Get user initials
+### Récupérer les initiales d'un utilisateur
 
 ```ts
 import { useInitials } from "@/hooks/use-initials";
@@ -35,22 +37,55 @@ const { auth } = usePage<SharedData>().props;
 const initials = useInitials(auth.user.name); // "JD"
 ```
 
-### Manage appearance theme
+### Gérer le thème d'apparence
 
 ```ts
 import { useAppearance } from "@/hooks/use-appearance";
 
 const { theme, setTheme } = useAppearance();
 
-// To switch to dark mode:
+// Pour passer en mode sombre :
 setTheme("dark");
 ```
 
-### Use cart (with mandatory context)
+### Détecter la navigation active
+
+```tsx
+import { useActiveNav } from "@/hooks/use-active-nav";
+import { Link } from "@inertiajs/react";
+import { cn } from "@/lib/utils";
+
+const navItems = [
+  { title: "Dashboard", href: "/admin" },
+  { title: "Products", href: "/admin/products" },
+];
+
+navItems.map((item) => {
+  const isActive = useActiveNav(item.href);
+  return (
+    <Link
+      key={item.href}
+      href={item.href}
+      className={cn(
+        "nav-link",
+        isActive && "active"
+      )}
+    >
+      {item.title}
+    </Link>
+  );
+});
+```
+
+<Callout>
+    Le hook `useActiveNav` gère automatiquement les cas spéciaux comme la route `/admin` et vérifie si l'URL actuelle correspond exactement à l'href, commence par l'href suivi d'un `/` ou d'un `?`.
+</Callout>
+
+### Utiliser le panier (avec context obligatoire)
 
 ```ts
 import { useCartContext } from '@/contexts/cart-context';
-// Warning: this hook must be used inside <CartProvider>
+// Attention : ce hook doit être utilisé dans <CartProvider>
 
 const { addToCart } = useCartContext();
 const PRODUCT = {...};
@@ -58,16 +93,45 @@ addToCart({ product: PRODUCT, quantity: 2 });
 ```
 
 <Callout>
-    Swell is entirely wrapped in the `CartProvider`. Thus, all child components can use cart-related hooks without additional configuration.
+    Swell est entièrement encapsulée dans le `CartProvider`. Ainsi, tous les composants enfants peuvent utiliser les hooks liés au panier sans configuration supplémentaire.
 </Callout>
 
-## Why use these hooks?
+### Afficher une confirmation (avec context obligatoire)
 
--   **Logic centralization**: Business or UI logic is factorized and testable.
--   **Reusability**: Hooks are usable in any component (provided they are in the right provider).
--   **Readability**: Component code remains simple and readable.
+```tsx
+import { useConfirmContext } from '@/contexts/confirm-context';
+// Attention : ce hook doit être utilisé dans <ConfirmProvider>
+
+const { confirm } = useConfirmContext();
+
+const handleDelete = async () => {
+    const confirmed = await confirm({
+        title: 'Confirmer la suppression',
+        description: 'Êtes-vous sûr de vouloir supprimer cet élément ?',
+        confirmText: 'Supprimer',
+        cancelText: 'Annuler',
+        variant: 'destructive',
+        icon: <Trash2 className="size-4" />,
+    });
+
+    if (confirmed) {
+        // Effectuer l'action de suppression
+        deleteItem();
+    }
+};
+```
 
 <Callout>
-    For more examples or to create your own hooks, draw inspiration from the structure of existing hooks in the
-    `resources/js/hooks/` folder.
+    Le hook `useConfirm` retourne une promesse qui se résout avec `true` si l'utilisateur confirme, ou `false` s'il annule. Cela permet d'utiliser async/await pour gérer le flux de confirmation de manière élégante.
+</Callout>
+
+## Pourquoi utiliser ces hooks ?
+
+-   **Centralisation de la logique** : La logique métier ou d'UI est factorisée et testable.
+-   **Réutilisabilité** : Les hooks sont utilisables dans n'importe quel composant (sous réserve d'être dans le bon provider).
+-   **Lisibilité** : Le code des composants reste simple et lisible.
+
+<Callout>
+    Pour plus d'exemples ou pour créer vos propres hooks, inspirez-vous de la structure des hooks existants dans le
+    dossier `resources/js/hooks/`.
 </Callout>

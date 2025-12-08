@@ -476,10 +476,33 @@ public function share(Request $request): array
 - Gère l'interface de modification des quantités
 - Calcule et affiche le total
 - Boutons d'action (vider, commander)
+- Utilise `useConfirmContext` pour afficher une confirmation avant de vider le panier
 
-**cart-clear-confirmation-dialog** - Modal de confirmation pour vider le panier
+```tsx title="resources/js/components/swell/cart-sheet.tsx"
+import { useConfirmContext } from '@/contexts/confirm-context';
+import { useCartContext } from '@/contexts/cart-context';
 
-- Affiche une modale pour confirmer la suppression du panier
+export function CartSheet() {
+    const { clearCart } = useCartContext();
+    const { confirm } = useConfirmContext();
+
+    const handleClearCart = async () => {
+        const confirmed = await confirm({
+            title: 'Confirmation de la suppression du panier',
+            description: 'Êtes-vous sûr de vouloir vider votre panier ?',
+            confirmText: 'Vider le panier',
+            cancelText: 'Annuler',
+            variant: 'destructive',
+        });
+
+        if (confirmed) {
+            clearCart();
+        }
+    };
+
+    // ... reste du composant
+}
+```
 
 ## Routes
 

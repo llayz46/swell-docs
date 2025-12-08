@@ -476,10 +476,33 @@ public function share(Request $request): array
 - Manages the quantity modification interface
 - Calculates and displays the total
 - Action buttons (clear, order)
+- Uses `useConfirmContext` to display a confirmation before clearing the cart
 
-**cart-clear-confirmation-dialog** - Confirmation modal for clearing the cart
+```tsx title="resources/js/components/swell/cart-sheet.tsx"
+import { useConfirmContext } from '@/contexts/confirm-context';
+import { useCartContext } from '@/contexts/cart-context';
 
-- Displays a modal to confirm cart deletion
+export function CartSheet() {
+    const { clearCart } = useCartContext();
+    const { confirm } = useConfirmContext();
+
+    const handleClearCart = async () => {
+        const confirmed = await confirm({
+            title: 'Clear cart confirmation',
+            description: 'Are you sure you want to clear your cart?',
+            confirmText: 'Clear cart',
+            cancelText: 'Cancel',
+            variant: 'destructive',
+        });
+
+        if (confirmed) {
+            clearCart();
+        }
+    };
+
+    // ... rest of the component
+}
+```
 
 ## Routes
 
