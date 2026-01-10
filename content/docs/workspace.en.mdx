@@ -1,0 +1,213 @@
+---
+title: Workspace
+description: Collaborative project management system in Swell - team, issue and notification management.
+---
+
+## Workspace System
+
+**Swell** offers a **Workspace** module for managing teams, issues, and an inbox for notifications. This module is designed for internal collaboration.
+
+<Callout type="info">
+  The workspace is an optional module. See the [Module Management](/modules-management) page to enable it in your installation.
+</Callout>
+
+## Features
+
+- **Team management**: Create and manage teams with members and roles
+- **Issue system**: Create, assign and track tasks
+- **Inbox**: Notifications and activity tracking
+- **Comments**: Discussion on issues
+- **Subscriptions**: Follow relevant issues
+
+## Configuration
+
+### Environment variables
+
+```bash
+SWELL_WORKSPACE_ENABLED=true
+SWELL_WORKSPACE_IDENTIFIER_PREFIX=WS
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SWELL_WORKSPACE_ENABLED` | Enable/disable the workspace module | `true` |
+| `SWELL_WORKSPACE_IDENTIFIER_PREFIX` | Issue identifier prefix | `WS` |
+
+## Module architecture
+
+The module is organized in `app/Modules/Workspace/`:
+
+```
+app/Modules/Workspace/
+├── Actions/                    # Actions (invitations, comments)
+├── Enums/
+│   ├── WorkspaceRole.php       # Workspace and team roles
+│   └── PriorityIconType.php    # Priority icon types
+├── Models/
+│   ├── Team.php                # Team
+│   ├── Issue.php               # Task/Issue
+│   ├── IssueStatus.php         # Issue status
+│   ├── IssuePriority.php       # Issue priority
+│   ├── IssueLabel.php          # Label/tag
+│   ├── IssueComment.php        # Comment
+│   ├── IssueActivity.php       # Activity history
+│   ├── IssueSubscription.php   # Subscription
+│   ├── InboxItem.php           # Inbox notification
+│   └── TeamInvitation.php      # Team invitation
+├── Http/
+│   ├── Controllers/            # Workspace controllers
+│   ├── Requests/               # Form requests validation
+│   └── Resources/              # API Resources
+├── Policies/                   # Authorization policies
+├── Services/
+│   └── WorkspaceService.php    # Main service
+├── Observers/
+│   └── IssueObserver.php       # Issue observer
+├── database/
+│   ├── migrations/             # Migrations
+│   ├── factories/              # Test factories
+│   └── seeders/                # Seeders
+└── WorkspaceServiceProvider.php
+```
+
+## Role system
+
+The workspace uses two levels of roles:
+
+### Global role (Spatie)
+- `workspace-admin`: Administrator with full access to all teams
+
+### Team roles (team_user pivot)
+- `team-lead`: Team leader, can invite and manage members
+- `team-member`: Standard team member
+
+```php
+use App\Modules\Workspace\Enums\WorkspaceRole;
+
+// Check if workspace admin
+$user->isWorkspaceAdmin();
+
+// Get role in a team
+$team->getRoleForUser($user);
+$team->isLead($user);
+$team->isMember($user);
+```
+
+## Main models
+
+### Team
+
+```php
+// Add a member
+$team->addMember($user, WorkspaceRole::TeamMember->value);
+
+// Remove a member
+$team->removeMember($user);
+
+// Promote/demote
+$team->promoteMember($user);   // To team-lead
+$team->demoteLead($user);      // To team-member
+
+// Transfer lead role
+$team->transferLead($fromUser, $toUser);
+```
+
+### Issue
+
+Represents a task with unique identifier (e.g., `WS-42`).
+
+**Relations**:
+- `status`: Status (Backlog, Todo, In Progress, Done...)
+- `priority`: Priority with icon
+- `labels`: Tags/labels (many-to-many)
+- `assignee`: Assigned user
+- `creator`: Issue creator
+- `team`: Associated team
+- `comments`: Comments
+- `activities`: Modification history
+- `subscribers`: Subscribed users
+
+## Routes
+
+### Inbox
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/workspace/inbox` | GET | Notification list |
+| `/workspace/inbox/read-all` | POST | Mark all as read |
+| `/workspace/inbox/{item}/read` | PATCH | Mark as read |
+| `/workspace/inbox/{item}` | DELETE | Delete notification |
+
+### My Issues
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/workspace/my-issues/overview` | GET | Overview |
+| `/workspace/my-issues/focus` | GET | Focus mode |
+
+### Teams
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/workspace/teams` | GET | Team list |
+| `/workspace/teams` | POST | Create a team |
+| `/workspace/teams/{team}/issues` | GET | Team issues |
+| `/workspace/teams/{team}/members` | GET | Team members |
+| `/workspace/teams/{team}/invite` | POST | Invite a member |
+| `/workspace/teams/{team}/leave` | POST | Leave the team |
+
+### Issues
+
+| Route | Method | Description |
+|-------|--------|-------------|
+| `/workspace/issues/{identifier}` | GET | Issue detail |
+| `/workspace/issues` | POST | Create an issue |
+| `/workspace/issues/{issue}` | PATCH | Update an issue |
+| `/workspace/issues/{issue}` | DELETE | Delete an issue |
+| `/workspace/issues/{issue}/subscribe` | POST | Subscribe |
+| `/workspace/issues/{issue}/subscribe` | DELETE | Unsubscribe |
+
+## WorkspaceService
+
+Main service for workspace operations with built-in caching.
+
+```php
+use App\Modules\Workspace\Services\WorkspaceService;
+
+$workspaceService = app(WorkspaceService::class);
+
+// User teams (cached 60s)
+$teams = $workspaceService->getUserTeams($user);
+
+// Workspace members
+$members = $workspaceService->getWorkspaceMembers();
+
+// Teams where user can invite
+$teams = $workspaceService->getInvitableTeams($user);
+
+// Invalidate cache
+$workspaceService->clearUserTeamsCache($user);
+$workspaceService->clearWorkspaceMembersCache();
+```
+
+## Middleware
+
+The module uses two middlewares:
+
+- `feature:workspace`: Checks that the module is enabled
+- `workspace.access`: Checks that the user has access to the workspace
+
+## Policies
+
+Policies handle authorization:
+
+- **TeamPolicy**: Create, modify, invite members
+- **IssuePolicy**: CRUD on issues
+- **IssueCommentPolicy**: Edit/delete comments
+- **InboxItemPolicy**: Notification management
+
+<Callout>
+  The Workspace module enables collaborative task management within your
+  application. For more information on activation, see the
+  [module documentation](/modules-management).
+</Callout>

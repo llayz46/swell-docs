@@ -1,0 +1,214 @@
+---
+title: Workspace
+description: Système de gestion de projet collaboratif dans Swell - gestion des équipes, issues et notifications.
+---
+
+## Système Workspace
+
+**Swell** propose un module **Workspace** permettant de gérer des équipes, des issues et une boîte de réception pour les notifications. Ce module est conçu pour la collaboration interne.
+
+<Callout type="info">
+  Le workspace est un module optionnel. Consultez la page [Gestion des
+  Modules](/modules-management) pour l'activer dans votre installation.
+</Callout>
+
+## Caractéristiques
+
+- **Gestion des équipes** : Création et gestion d'équipes avec membres et rôles
+- **Système d'issues** : Création, assignation et suivi des tâches
+- **Boîte de réception** : Notifications et suivi des activités
+- **Commentaires** : Discussion sur les issues
+- **Abonnements** : Suivi des issues pertinentes
+
+## Configuration
+
+### Variables d'environnement
+
+```bash
+SWELL_WORKSPACE_ENABLED=true
+SWELL_WORKSPACE_IDENTIFIER_PREFIX=WS
+```
+
+| Variable | Description | Défaut |
+|----------|-------------|--------|
+| `SWELL_WORKSPACE_ENABLED` | Active/désactive le module workspace | `true` |
+| `SWELL_WORKSPACE_IDENTIFIER_PREFIX` | Préfixe des identifiants d'issues | `WS` |
+
+## Architecture du module
+
+Le module est organisé dans `app/Modules/Workspace/` :
+
+```
+app/Modules/Workspace/
+├── Actions/                    # Actions (invitations, commentaires)
+├── Enums/
+│   ├── WorkspaceRole.php       # Rôles workspace et team
+│   └── PriorityIconType.php    # Types d'icônes priorité
+├── Models/
+│   ├── Team.php                # Équipe
+│   ├── Issue.php               # Tâche/Issue
+│   ├── IssueStatus.php         # Statut d'issue
+│   ├── IssuePriority.php       # Priorité d'issue
+│   ├── IssueLabel.php          # Label/tag
+│   ├── IssueComment.php        # Commentaire
+│   ├── IssueActivity.php       # Historique d'activité
+│   ├── IssueSubscription.php   # Abonnement
+│   ├── InboxItem.php           # Notification inbox
+│   └── TeamInvitation.php      # Invitation d'équipe
+├── Http/
+│   ├── Controllers/            # Contrôleurs workspace
+│   ├── Requests/               # Form requests validation
+│   └── Resources/              # API Resources
+├── Policies/                   # Policies d'autorisation
+├── Services/
+│   └── WorkspaceService.php    # Service principal
+├── Observers/
+│   └── IssueObserver.php       # Observer pour issues
+├── database/
+│   ├── migrations/             # Migrations
+│   ├── factories/              # Factories pour tests
+│   └── seeders/                # Seeders
+└── WorkspaceServiceProvider.php
+```
+
+## Système de rôles
+
+Le workspace utilise deux niveaux de rôles :
+
+### Rôle global (Spatie)
+- `workspace-admin` : Administrateur avec accès complet à toutes les équipes
+
+### Rôles d'équipe (pivot team_user)
+- `team-lead` : Chef d'équipe, peut inviter et gérer les membres
+- `team-member` : Membre standard de l'équipe
+
+```php
+use App\Modules\Workspace\Enums\WorkspaceRole;
+
+// Vérifier si admin workspace
+$user->isWorkspaceAdmin();
+
+// Obtenir le rôle dans une équipe
+$team->getRoleForUser($user);
+$team->isLead($user);
+$team->isMember($user);
+```
+
+## Modèles principaux
+
+### Team
+
+```php
+// Ajouter un membre
+$team->addMember($user, WorkspaceRole::TeamMember->value);
+
+// Retirer un membre
+$team->removeMember($user);
+
+// Promouvoir/rétrograder
+$team->promoteMember($user);   // Vers team-lead
+$team->demoteLead($user);      // Vers team-member
+
+// Transférer le rôle de lead
+$team->transferLead($fromUser, $toUser);
+```
+
+### Issue
+
+Représente une tâche avec identifiant unique (ex: `WS-42`).
+
+**Relations** :
+- `status` : Statut (Backlog, Todo, In Progress, Done...)
+- `priority` : Priorité avec icône
+- `labels` : Tags/labels (many-to-many)
+- `assignee` : Utilisateur assigné
+- `creator` : Créateur de l'issue
+- `team` : Équipe associée
+- `comments` : Commentaires
+- `activities` : Historique des modifications
+- `subscribers` : Utilisateurs abonnés
+
+## Routes
+
+### Boîte de réception
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/workspace/inbox` | GET | Liste des notifications |
+| `/workspace/inbox/read-all` | POST | Marquer tout comme lu |
+| `/workspace/inbox/{item}/read` | PATCH | Marquer comme lu |
+| `/workspace/inbox/{item}` | DELETE | Supprimer notification |
+
+### Mes Issues
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/workspace/my-issues/overview` | GET | Vue d'ensemble |
+| `/workspace/my-issues/focus` | GET | Mode focus |
+
+### Équipes
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/workspace/teams` | GET | Liste des équipes |
+| `/workspace/teams` | POST | Créer une équipe |
+| `/workspace/teams/{team}/issues` | GET | Issues de l'équipe |
+| `/workspace/teams/{team}/members` | GET | Membres de l'équipe |
+| `/workspace/teams/{team}/invite` | POST | Inviter un membre |
+| `/workspace/teams/{team}/leave` | POST | Quitter l'équipe |
+
+### Issues
+
+| Route | Méthode | Description |
+|-------|---------|-------------|
+| `/workspace/issues/{identifier}` | GET | Détail d'une issue |
+| `/workspace/issues` | POST | Créer une issue |
+| `/workspace/issues/{issue}` | PATCH | Modifier une issue |
+| `/workspace/issues/{issue}` | DELETE | Supprimer une issue |
+| `/workspace/issues/{issue}/subscribe` | POST | S'abonner |
+| `/workspace/issues/{issue}/subscribe` | DELETE | Se désabonner |
+
+## Service WorkspaceService
+
+Service principal pour les opérations workspace avec cache intégré.
+
+```php
+use App\Modules\Workspace\Services\WorkspaceService;
+
+$workspaceService = app(WorkspaceService::class);
+
+// Équipes de l'utilisateur (cached 60s)
+$teams = $workspaceService->getUserTeams($user);
+
+// Membres du workspace
+$members = $workspaceService->getWorkspaceMembers();
+
+// Équipes où l'utilisateur peut inviter
+$teams = $workspaceService->getInvitableTeams($user);
+
+// Invalider le cache
+$workspaceService->clearUserTeamsCache($user);
+$workspaceService->clearWorkspaceMembersCache();
+```
+
+## Middleware
+
+Le module utilise deux middlewares :
+
+- `feature:workspace` : Vérifie que le module est activé
+- `workspace.access` : Vérifie que l'utilisateur a accès au workspace
+
+## Policies
+
+Les policies gèrent les autorisations :
+
+- **TeamPolicy** : Création, modification, invitation de membres
+- **IssuePolicy** : CRUD sur les issues
+- **IssueCommentPolicy** : Modification/suppression de commentaires
+- **InboxItemPolicy** : Gestion des notifications
+
+<Callout>
+  Le module Workspace permet une gestion collaborative des tâches au sein de
+  votre application. Pour plus d'informations sur l'activation, consultez la
+  [documentation des modules](/modules-management).
+</Callout>
