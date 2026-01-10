@@ -1,99 +1,126 @@
 ---
 title: Seeders
-description: Initialiser rapidement des données essentielles ou de développement dans la base de données avec les seeders de Swell.
+description: Initialiser rapidement des données essentielles ou de démonstration dans la base de données avec les seeders de Swell.
 ---
 
-## Les seeders dans Swell
+## Architecture des Seeders
 
-Les seeders permettent d’ajouter automatiquement des données essentielles ou de test dans la base de données. 
-**Swell** propose plusieurs seeders pour faciliter l’installation, le développement et les tests de votre application.
+Swell organise ses seeders en deux niveaux pour une flexibilité maximale :
 
-## Initialiser les rôles avec le RoleSeeder
+| Seeder | Usage | Commande |
+|--------|-------|----------|
+| `DatabaseSeeder` | Données essentielles (rôles) | `php artisan db:seed` |
+| `DemoSeeder` | Données de démonstration complètes | `php artisan db:seed --class=DemoSeeder` |
 
-Le `RoleSeeder` permet d’ajouter automatiquement les rôles essentiels à la base de données lors de l’installation ou du développement de l’application.
+```bash tab="Base (rôles uniquement)"
+php artisan db:seed
+```
 
-**Swell** s’appuie sur le package [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) pour la gestion des rôles et permissions. Ce package robuste facilite la création, l’attribution et la gestion des rôles dans Laravel.
+```bash tab="Démo complète"
+php artisan db:seed --class=DemoSeeder
+```
 
-### Pourquoi utiliser un seeder de rôles ?
+```bash tab="Fresh + Démo"
+php artisan migrate:fresh --seed --seeder=DemoSeeder
+```
 
-- **Gain de temps** : plus besoin de créer manuellement les rôles à chaque nouvelle installation.
-- **Cohérence** : tous les environnements disposent des mêmes rôles de base.
-- **Automatisation** : facilite les déploiements et les tests.
+## DatabaseSeeder - Données essentielles
+
+Le `DatabaseSeeder` exécute uniquement le `RoleSeeder` pour créer les rôles nécessaires au fonctionnement de l'application.
+
+**Swell** s'appuie sur le package [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) pour la gestion des rôles et permissions.
+
+### Rôles créés
+
+- `admin` : accès complet aux pages Admin
+- `customer` : utilisateurs ayant passé commande
+- `visitor` : utilisateur de base
 
 <Callout>
-    Utilise le RoleSeeder pour t’assurer que les rôles comme `admin`, `customer` ou `visitor` existent toujours dans la base de données. Ces rôles sont créés via le package spatie/laravel-permission.
+Le `RoleSeeder` utilise `firstOrCreate()` et peut être exécuté plusieurs fois sans risque de duplication.
 </Callout>
 
-### Exemple d’exécution
+## DemoSeeder - Données de démonstration
 
-Pour initialiser les rôles de base, il suffit d’exécuter la commande suivante :
+Le `DemoSeeder` crée un environnement complet pour tester l'application :
 
-```bash tab="Seeder"
-php artisan db:seed --class=RoleSeeder
+### Données générées
+
+| Seeder | Description |
+|--------|-------------|
+| `RoleSeeder` | Rôles de base (admin, customer, visitor) |
+| `AdminUserSeeder` | Utilisateur admin (`john@doe.com` / `password`) |
+| `BannerSeeder` | Messages de bannière promotionnels |
+| `CatalogSeeder` | Marques, catégories et produits (thème fashion) |
+| `DashboardSeeder` | Utilisateurs et commandes pour les analytics |
+
+### Structure des fichiers
+
+```
+database/seeders/
+├── DatabaseSeeder.php      # Point d'entrée par défaut (RoleSeeder)
+├── DemoSeeder.php          # Point d'entrée données de démo
+├── RoleSeeder.php          # Rôles de base
+└── Demo/
+    ├── AdminUserSeeder.php # Utilisateur admin
+    ├── BannerSeeder.php    # Messages bannière
+    ├── CatalogSeeder.php   # Marques, catégories, produits
+    └── DashboardSeeder.php # Données dashboard (users + orders)
 ```
 
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=RoleSeeder
-```
-
-Après exécution, les rôles suivants seront créés :
-
-- `admin` : accès complet aux pages Admin.
-- `customer` : regroupe les utilisateurs ayant passé commande.
-- `visitor` : utilisateur de base, n'ayant pas encore passé commande.
-
-<Callout title="Bon à savoir">
-    Adapter le contenu du RoleSeeder selon les besoins spécifiques de ton application.
-    
-    Pour plus d'info sur la gestion des permissions, voir la documentation de [spatie/laravel-permission](https://spatie.be/docs/laravel-permission)
+<Callout title="Compte admin">
+Après exécution du `DemoSeeder`, connecte-toi avec :
+- Email : `john@doe.com`
+- Mot de passe : `password`
 </Callout>
 
-## Initialiser des données de développement avec le LocalSeeder
+### Catalogue de produits
 
-Le `LocalSeeder` est conçu pour faciliter le développement local en injectant des données de test dans la base de données : utilisateurs, produits, catégories, etc. Il permet de simuler un environnement réaliste sans avoir à créer manuellement chaque entrée.
+Le `CatalogSeeder` génère un catalogue fashion complet :
 
-### Exemple d’exécution
+**Catégories principales :**
+- Femme (Hauts, Pantalons, Robes & Jupes, etc.)
+- Homme (T-shirts & Polos, Chemises, Sweats, etc.)
+- Accessoires (Sacs, Ceintures, Bijoux, etc.)
+- Sport (Vêtements, Chaussures, Équipement)
 
-```bash tab="Seeder"
-php artisan db:seed --class=LocalSeeder
+**Marques :** Zara, H&M, Nike, Adidas, Levi's, Mango, et plus.
+
+### Dashboard Analytics
+
+Le `DashboardSeeder` génère 6 mois de données réalistes :
+- 30+ utilisateurs avec dates de création variées
+- Commandes distribuées avec revenus réalistes
+- Données parfaites pour tester les graphiques du dashboard admin
+
+## Seeders par module
+
+Si des modules sont activés, le `DemoSeeder` exécute automatiquement leurs seeders :
+
+```php
+// Dans DemoSeeder.php
+if (config('swell.workspace.enabled', false)) {
+    $this->call(WorkspaceModuleSeeder::class);
+}
 ```
 
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=LocalSeeder
+## Créer un seeder personnalisé
+
+Pour ajouter tes propres données de test :
+
+```bash
+php artisan make:seeder CustomSeeder
 ```
 
-Ce seeder va créer un ensemble de données variées pour que vous puissiez tester l’application dans des conditions proches de la production.
-
-<Callout>
-    Le `LocalSeeder` est à utiliser uniquement en environnement de développement.
-</Callout>
-
-## Générer des produits de test avec le LocalProductSeeder
-
-Le `LocalProductSeeder` permet de générer rapidement un catalogue de produits fictifs pour tester les fonctionnalités e-commerce de Swell (listing, recherche, panier, etc.).
-
-### Exemple d’exécution
-
-```bash tab="Seeder"
-php artisan db:seed --class=LocalProductSeeder
-```
-
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=LocalProductSeeder
-```
-
-Après exécution, plusieurs produits de test seront disponibles dans la boutique, avec des prix, stocks et descriptions variés.
-
-<Callout>
-    Le `LocalProductSeeder`, appelé par le `LocalSeeder`, centralise la génération de produits de test réalistes pour simuler un vrai catalogue sans alourdir le `LocalSeeder`.
-</Callout>
+Puis ajoute-le au `DemoSeeder` ou crée ton propre point d'entrée.
 
 ## Conseils et bonnes pratiques
 
-- Exécutez les seeders adaptés à votre environnement : `RoleSeeder` pour la base et `LocalSeeder` pour le développement.
-- N’utilisez jamais les seeders de développement (`LocalSeeder`) en production.
-- Personnalisez le contenu des seeders selon les besoins spécifiques de votre projet.
+- **Production** : Exécute uniquement `php artisan db:seed` (RoleSeeder)
+- **Développement** : Utilise `php artisan db:seed --class=DemoSeeder`
+- **Tests** : Le `DemoSeeder` fournit des données cohérentes pour les tests manuels
+- **Idempotence** : Le `RoleSeeder` peut être exécuté plusieurs fois sans erreur
 
 <Callout>
-    Pour aller plus loin, consultez la documentation Laravel sur les seeders : [https://laravel.com/docs/seeding](https://laravel.com/docs/seeding)
+Pour aller plus loin, consultez la documentation Laravel sur les seeders : [https://laravel.com/docs/seeding](https://laravel.com/docs/seeding)
 </Callout>

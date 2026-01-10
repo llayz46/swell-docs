@@ -1,99 +1,126 @@
 ---
 title: Seeders
-description: Quickly initialize essential or development data in the database with Swell seeders.
+description: Quickly initialize essential or demo data in the database with Swell seeders.
 ---
 
-## Seeders in Swell
+## Seeder Architecture
 
-Seeders allow you to automatically add essential or test data to the database. 
-**Swell** provides several seeders to facilitate installation, development and testing of your application.
+Swell organizes its seeders in two levels for maximum flexibility:
 
-## Initialize roles with RoleSeeder
+| Seeder | Usage | Command |
+|--------|-------|---------|
+| `DatabaseSeeder` | Essential data (roles) | `php artisan db:seed` |
+| `DemoSeeder` | Complete demo data | `php artisan db:seed --class=DemoSeeder` |
 
-The `RoleSeeder` allows you to automatically add essential roles to the database during installation or application development.
+```bash tab="Base (roles only)"
+php artisan db:seed
+```
 
-**Swell** relies on the [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) package for role and permission management. This robust package facilitates the creation, assignment and management of roles in Laravel.
+```bash tab="Full demo"
+php artisan db:seed --class=DemoSeeder
+```
 
-### Why use a role seeder?
+```bash tab="Fresh + Demo"
+php artisan migrate:fresh --seed --seeder=DemoSeeder
+```
 
-- **Time saving**: no need to manually create roles for each new installation.
-- **Consistency**: all environments have the same base roles.
-- **Automation**: facilitates deployments and testing.
+## DatabaseSeeder - Essential Data
+
+The `DatabaseSeeder` only runs the `RoleSeeder` to create the roles required for the application to function.
+
+**Swell** relies on the [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) package for role and permission management.
+
+### Roles Created
+
+- `admin`: full access to Admin pages
+- `customer`: users who have placed orders
+- `visitor`: basic user
 
 <Callout>
-    Use the RoleSeeder to ensure that roles like `admin`, `customer` or `visitor` always exist in the database. These roles are created via the spatie/laravel-permission package.
+The `RoleSeeder` uses `firstOrCreate()` and can be run multiple times without risk of duplication.
 </Callout>
 
-### Execution example
+## DemoSeeder - Demo Data
 
-To initialize the base roles, simply run the following command:
+The `DemoSeeder` creates a complete environment to test the application:
 
-```bash tab="Seeder"
-php artisan db:seed --class=RoleSeeder
+### Generated Data
+
+| Seeder | Description |
+|--------|-------------|
+| `RoleSeeder` | Base roles (admin, customer, visitor) |
+| `AdminUserSeeder` | Admin user (`john@doe.com` / `password`) |
+| `BannerSeeder` | Promotional banner messages |
+| `CatalogSeeder` | Brands, categories and products (fashion theme) |
+| `DashboardSeeder` | Users and orders for analytics |
+
+### File Structure
+
+```
+database/seeders/
+├── DatabaseSeeder.php      # Default entry point (RoleSeeder)
+├── DemoSeeder.php          # Demo data entry point
+├── RoleSeeder.php          # Base roles
+└── Demo/
+    ├── AdminUserSeeder.php # Admin user
+    ├── BannerSeeder.php    # Banner messages
+    ├── CatalogSeeder.php   # Brands, categories, products
+    └── DashboardSeeder.php # Dashboard data (users + orders)
 ```
 
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=RoleSeeder
-```
-
-After execution, the following roles will be created:
-
-- `admin`: full access to Admin pages.
-- `customer`: groups users who have placed orders.
-- `visitor`: basic user, who has not yet placed an order.
-
-<Callout title="Good to know">
-    Adapt the RoleSeeder content according to your application's specific needs.
-    
-    For more info on permission management, see the [spatie/laravel-permission](https://spatie.be/docs/laravel-permission) documentation
+<Callout title="Admin account">
+After running `DemoSeeder`, log in with:
+- Email: `john@doe.com`
+- Password: `password`
 </Callout>
 
-## Initialize development data with LocalSeeder
+### Product Catalog
 
-The `LocalSeeder` is designed to facilitate local development by injecting test data into the database: users, products, categories, etc. It allows you to simulate a realistic environment without having to manually create each entry.
+The `CatalogSeeder` generates a complete fashion catalog:
 
-### Execution example
+**Main categories:**
+- Women (Tops, Pants, Dresses & Skirts, etc.)
+- Men (T-shirts & Polos, Shirts, Sweats, etc.)
+- Accessories (Bags, Belts, Jewelry, etc.)
+- Sports (Clothing, Shoes, Equipment)
 
-```bash tab="Seeder"
-php artisan db:seed --class=LocalSeeder
+**Brands:** Zara, H&M, Nike, Adidas, Levi's, Mango, and more.
+
+### Dashboard Analytics
+
+The `DashboardSeeder` generates 6 months of realistic data:
+- 30+ users with varied creation dates
+- Orders distributed with realistic revenue
+- Perfect data for testing admin dashboard charts
+
+## Module Seeders
+
+If modules are enabled, the `DemoSeeder` automatically runs their seeders:
+
+```php
+// In DemoSeeder.php
+if (config('swell.workspace.enabled', false)) {
+    $this->call(WorkspaceModuleSeeder::class);
+}
 ```
 
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=LocalSeeder
+## Create a Custom Seeder
+
+To add your own test data:
+
+```bash
+php artisan make:seeder CustomSeeder
 ```
 
-This seeder will create a set of varied data so you can test the application under conditions close to production.
+Then add it to `DemoSeeder` or create your own entry point.
+
+## Tips and Best Practices
+
+- **Production**: Only run `php artisan db:seed` (RoleSeeder)
+- **Development**: Use `php artisan db:seed --class=DemoSeeder`
+- **Testing**: The `DemoSeeder` provides consistent data for manual testing
+- **Idempotence**: The `RoleSeeder` can be run multiple times without errors
 
 <Callout>
-    The `LocalSeeder` should only be used in development environment.
-</Callout>
-
-## Generate test products with LocalProductSeeder
-
-The `LocalProductSeeder` allows you to quickly generate a catalog of fictitious products to test Swell's e-commerce features (listing, search, cart, etc.).
-
-### Execution example
-
-```bash tab="Seeder"
-php artisan db:seed --class=LocalProductSeeder
-```
-
-```bash tab="Fresh"
-php artisan migrate:fresh --seed --seeder=LocalProductSeeder
-```
-
-After execution, several test products will be available in the shop, with varied prices, stocks and descriptions.
-
-<Callout>
-    The `LocalProductSeeder`, called by the `LocalSeeder`, centralizes the generation of realistic test products to simulate a real catalog without weighing down the `LocalSeeder`.
-</Callout>
-
-## Tips and best practices
-
-- Run seeders adapted to your environment: `RoleSeeder` for the base and `LocalSeeder` for development.
-- Never use development seeders (`LocalSeeder`) in production.
-- Customize seeder content according to your project's specific needs.
-
-<Callout>
-    To go further, consult the Laravel documentation on seeders: [https://laravel.com/docs/seeding](https://laravel.com/docs/seeding)
+To go further, consult the Laravel documentation on seeders: [https://laravel.com/docs/seeding](https://laravel.com/docs/seeding)
 </Callout>
