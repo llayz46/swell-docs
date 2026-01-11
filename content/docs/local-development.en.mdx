@@ -15,7 +15,7 @@ This command groups the following commands:
 
 - `php artisan serve`: Starts the Laravel development server.
 - `php artisan queue:listen`: Starts the queue manager for background tasks.
-- `npm run dev`: Compiles front-end assets with Vite.
+- `pnpm run dev`: Compiles front-end assets with Vite.
 - `stripe listen --forward-to http://localhost:8000/stripe/webhook`: Listens for Stripe events and redirects them to the Swell API.
 
 To customize the command, you can modify the `dev` script in the `composer.json` file:
@@ -25,7 +25,7 @@ To customize the command, you can modify the `dev` script in the `composer.json`
     "scripts": {
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen\" \"npm run dev\" \"stripe listen --forward-to http://localhost:8000/stripe/webhook\" --names='server,queue,vite,stripe'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen\" \"pnpm run dev\" \"stripe listen --forward-to http://localhost:8000/stripe/webhook\" --names='server,queue,vite,stripe'"
         ]
     }
 }
