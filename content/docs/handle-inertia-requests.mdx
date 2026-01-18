@@ -7,77 +7,155 @@ description: Personnalisation du partage de données globales avec Inertia dans 
 
 Par défaut, la méthode `share` du middleware `HandleInertiaRequests` permet de définir les données accessibles sur toutes les pages côté front. On peut y injecter des variables, des callbacks, ou même des closures pour du lazy loading.
 
-## Personnaliser le middleware dans Swell
+## Architecture : Services dédiés
 
-Dans **Swell**, la méthode `share` a été largement personnalisée pour répondre aux besoins de l’application.
-Voici ce qui est partagé :
+Dans **Swell**, la logique métier des shared props a été extraite dans des **services dédiés** pour suivre les bonnes pratiques d'architecture :
+
+- **SharedPropsService** : Service principal qui orchestre toutes les shared props
+- **CategoryCacheService** : Gestion du cache des catégories
+- **WorkspaceService** : Gestion des équipes (teams) de l'utilisateur
+
+Cette approche permet :
+- ✅ **Séparation des responsabilités** : Chaque service a un rôle clair
+- ✅ **Testabilité** : Les services peuvent être testés unitairement
+- ✅ **Réutilisabilité** : Les services peuvent être utilisés ailleurs dans l'application
+- ✅ **Maintenabilité** : Logique métier centralisée
+
+## Implémentation du middleware
+
+Le middleware `HandleInertiaRequests` délègue maintenant la logique aux services :
 
 ```php title="app/Http/Middleware/HandleInertiaRequests.php"
-public function share(Request $request): array
+<?php
+
+namespace App\Http\Middleware;
+
+use App\Services\SharedPropsService;
+use Illuminate\Http\Request;
+use Inertia\Middleware;
+
+class HandleInertiaRequests extends Middleware
 {
-    return [
-        ...parent::share($request),
-        'name' => config('app.name'),
-        'swell' => [
-            'wishlist' => [
-                'enabled' => config('swell.wishlist.enabled', true),
-            ],
-            'banner' => [
-                'enabled' => config('swell.banner.enabled', true),
-            ],
-            'review' => [
-                'enabled' => config('swell.review.enabled', true),
-            ],
-            'loyalty' => [
-                'enabled' => config('swell.loyalty.enabled', false),
-                'points_per_euro' => config('swell.loyalty.points_per_euro', 10),
-                'minimum_redeem_points' => config('swell.loyalty.minimum_redeem_points', 100),
-            ]
-        ],
-        'auth' => [
-            'user' => fn () => $request->user()?->load('roles'),
-        ],
-        'ziggy' => fn (): array => [
-            ...(new Ziggy)->toArray(),
-            'location' => $request->url(),
-        ],
-        'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-        'categories' => fn () => Cache::rememberForever('categories', fn () => CategoryResource::collection(Category::with(['childrenRecursive' => fn($q) => $q->withCount('products')])->withCount('products')->whereNull('parent_id')->get())),
-        'cart' => fn () => Cache::remember("cart-" . (auth()->check() ? 'user-' . auth()->id() : 'session-' . session()->getId()), 30, function () {
-            return CartResource::make(CartFactory::make()->load('items.product.images', 'items.product.brand', 'items.product.options.values'));
-        }),
-        'infoBanner' => fn () => config('swell.banner.enabled', true) ? Cache::rememberForever('infoBanner', fn () => BannerMessage::orderBy('order')->get()) : [],
-    ];
+    public function __construct(private SharedPropsService $sharedPropsService) {}
+
+    protected $rootView = 'app';
+
+    public function share(Request $request): array
+    {
+        $shared = [
+            ...parent::share($request),
+            'name' => config('app.name'),
+            'swell' => fn () => $this->sharedPropsService->getSwellConfig(),
+            'auth' => fn () => $this->sharedPropsService->getAuthData($request),
+            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'defaultSearchProducts' => fn () => $this->sharedPropsService->getDefaultSearchProducts(),
+            'categories' => fn () => $this->sharedPropsService->getCategories(),
+            'cart' => fn () => $this->sharedPropsService->getCart(),
+        ];
+
+        if (config('swell.banner.enabled', true)) {
+            $shared['infoBanner'] = fn () => $this->sharedPropsService->getInfoBanner();
+        }
+
+        if (config('swell.workspace.enabled', true)) {
+            $shared['workspaceMembers'] = fn () => $this->sharedPropsService->getWorkspaceMembers($request);
+            $shared['invitableTeams'] = fn () => $this->sharedPropsService->getInvitableTeams($request);
+        }
+
+        return $shared;
+    }
 }
+```
+
+## Services utilisés
+
+### SharedPropsService
+
+Service principal qui centralise toute la logique des shared props.
+
+```php title="app/Services/SharedPropsService.php"
+public function getSwellConfig(): array;
+public function getAuthData(Request $request): array;
+public function getDefaultSearchProducts();
+public function getCategories();
+public function getCart(): CartResource;
+public function getInfoBanner();
+public function getWorkspaceMembers(Request $request);
+public function getInvitableTeams(Request $request);
+public function clearAllCaches(): void;
+```
+
+**Méthodes :**
+- `getSwellConfig()` : Configuration des modules (wishlist, banner, review, loyalty, workspace)
+- `getAuthData($request)` : Données d'authentification (user + teams)
+- `getDefaultSearchProducts()` : Produits populaires pour la recherche (cache 1h)
+- `getCategories()` : Catégories en cache (via CategoryCacheService)
+- `getCart()` : Panier avec cache (30s)
+- `getInfoBanner()` : Messages de bannière si activés
+- `getWorkspaceMembers($request)` : Membres du workspace (uniquement sur routes workspace)
+- `getInvitableTeams($request)` : Équipes où l'utilisateur peut inviter (uniquement sur routes workspace)
+- `clearAllCaches()` : Vide tous les caches
+
+### CategoryCacheService
+
+Service dédié à la gestion du cache des catégories.
+
+```php title="app/Services/CategoryCacheService.php"
+public function getCachedCategories();
+public function clearCache(): void;
+public function refreshCache();
+```
+
+### WorkspaceService
+
+Service pour gérer les équipes (teams) de l'utilisateur.
+
+```php title="app/Services/WorkspaceService.php"
+public function getUserTeams(?User $user);
+public function clearUserTeamsCache(User $user): void;
+public function refreshUserTeams(User $user);
 ```
 
 ### Détail des données partagées
 
-| Propriété     | Description                                                                                                             |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `name`        | Le nom de l’application, injecté depuis la config.                                                                      |
-| `swell`       | Un tableau de fonctionnalités activables (wishlist, banner, review, loyalty), pour piloter dynamiquement le front.      |
-| `auth.user`   | L’utilisateur connecté, avec ses rôles, chargé à la demande (closure pour éviter des requêtes inutiles si non utilisé). |
-| `ziggy`       | Les routes front générées par Ziggy, avec la location courante.                                                         |
-| `sidebarOpen` | État d’ouverture de la sidebar, basé sur un cookie.                                                                     |
-| `categories`  | Les catégories principales, avec leurs enfants et le nombre de produits, mises en cache pour de meilleures perfs.       |
-| `cart`        | Le panier de l’utilisateur (ou de la session), également mis en cache.                                                  |
-| `infoBanner`  | Les messages de bannière d’info, récupérés et mis en cache si la fonctionnalité est activée.                            |
+| Propriété               | Description                                                                                                             |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `name`                  | Le nom de l'application, injecté depuis la config.                                                                      |
+| `swell`                 | Configuration des modules activables (wishlist, banner, review, loyalty, workspace). Mis en cache indéfiniment.         |
+| `auth.user`             | L'utilisateur connecté, avec ses rôles, chargé à la demande (closure pour éviter des requêtes inutiles si non utilisé). |
+| `auth.teams`            | Les équipes (teams) de l'utilisateur, avec membres et issues counts. Cache de 60s. Uniquement si workspace activé.      |
+| `sidebarOpen`           | État d'ouverture de la sidebar, basé sur un cookie.                                                                     |
+| `defaultSearchProducts` | Produits populaires pour la recherche rapide, mis en cache 1 heure.                                                     |
+| `categories`            | Les catégories principales, avec leurs enfants et le nombre de produits, mises en cache indéfiniment.                   |
+| `cart`                  | Le panier de l'utilisateur (ou de la session), mis en cache 30 secondes.                                                |
+| `infoBanner`            | Les messages de bannière d'info, mis en cache indéfiniment. Conditionnel : uniquement si `swell.banner.enabled`.        |
+| `workspaceMembers`      | Membres du workspace actuel. Conditionnel : uniquement sur les routes `workspace.*`.                                    |
+| `invitableTeams`        | Équipes où l'utilisateur peut inviter des membres. Conditionnel : uniquement sur les routes `workspace.*`.              |
+
+<Callout type="info">
+  Les propriétés `infoBanner`, `workspaceMembers` et `invitableTeams` sont conditionnelles et ne sont incluses que si leurs modules respectifs sont activés ou sur des routes spécifiques.
+</Callout>
 
 ### Pourquoi ces choix ?
 
-- **Closures** : Permettent de ne charger les données que si elles sont utilisées côté front (lazy loading).
-- **Cache** : Optimise les performances pour les données lourdes ou peu changeantes (catégories, bannières, panier).
+- **Services dédiés** : Séparation claire des responsabilités, testabilité, réutilisabilité
+- **Closures** : Permettent de ne charger les données que si elles sont utilisées côté front (lazy loading)
+- **Cache stratifié** :
+  - Cache indéfini pour les données quasi-statiques (catégories, config, bannières)
+  - Cache court (30-60s) pour les données dynamiques (panier, équipes)
+- **Injection de dépendances** : Le middleware reçoit SharedPropsService via le constructeur
 
 ## Typage côté front : SharedData
 
-Pour garantir la cohérence entre le backend et le frontend, il est important d’adapter le typage du côté front (typiquement le type `SharedData` dans ton code TypeScript). Chaque clé partagée ici doit être déclarée et typée côté front pour bénéficier de l’autocomplétion et éviter les erreurs.
+Pour garantir la cohérence entre le backend et le frontend, il est important d'adapter le typage du côté front (typiquement le type `SharedData` dans ton code TypeScript). Chaque clé partagée ici doit être déclarée et typée côté front pour bénéficier de l'autocomplétion et éviter les erreurs.
 
 <Callout>Pensez à mettre à jour le type `SharedData` à chaque ajout/modification dans le middleware.</Callout>
 
-## Exemple d’utilisation côté front : récupérer l’utilisateur connecté
+## Exemples d'utilisation côté front
 
-Voici comment accéder à l’utilisateur connecté dans un composant React avec Inertia.js :
+### Accéder à l'utilisateur connecté
+
+Voici comment accéder à l'utilisateur connecté dans un composant React avec Inertia.js :
 
 ```ts
 import type { SharedData } from "@/types";
@@ -98,6 +176,52 @@ export default function Exemple() {
         </div>
     );
 }
+```
+
+### Afficher dynamiquement les équipes dans la sidebar
+
+```tsx
+import { usePage } from '@inertiajs/react';
+import { SharedData, NavItem } from '@/types';
+import { Contact } from 'lucide-react';
+
+export default function WorkspaceLayout({ children }: PropsWithChildren) {
+    const { auth } = usePage<SharedData>().props;
+
+    // Transformer les équipes en items de navigation
+    const teamsNavItems: NavItem[] = auth.teams?.map(team => ({
+        title: team.name,
+        href: `/workspace/teams/${team.identifier}`,
+        icon: Contact,
+    })) ?? [];
+
+    return (
+        <WorkspaceLayoutTemplate
+            teamsNavItems={teamsNavItems}
+        >
+            {children}
+        </WorkspaceLayoutTemplate>
+    );
+}
+```
+
+## Gestion du cache
+
+Pour vider les caches, utiliser les services appropriés :
+
+```php
+use App\Services\SharedPropsService;
+use App\Services\CategoryCacheService;
+use App\Services\WorkspaceService;
+
+// Vider tous les caches
+app(SharedPropsService::class)->clearAllCaches();
+
+// Vider uniquement le cache des catégories
+app(CategoryCacheService::class)->clearCache();
+
+// Vider le cache des équipes d'un utilisateur spécifique
+app(WorkspaceService::class)->clearUserTeamsCache($user);
 ```
 
 <Callout>Pour plus d'info sur le middleware HandleInertiaRequests. Voir la documentation de [Inertia](https://inertiajs.com/shared-data).</Callout>
