@@ -314,16 +314,34 @@ Swell implements cache strategies to optimize performance:
 
 ### Inertia.js and shared props
 
-All Inertia pages automatically receive props via `HandleInertiaRequests`:
+All Inertia pages automatically receive props via `HandleInertiaRequests`, which now delegates logic to **dedicated services**:
 
+**Services used**:
+- **SharedPropsService**: Main orchestration of shared props
+- **CategoryCacheService**: Category cache management
+- **WorkspaceService**: User teams management
+
+**Available props**:
 - Global configuration (`swell.*`)
-- Authenticated user (`auth.user`)
+- Authenticated user and their teams (`auth.user`, `auth.teams`)
 - Current cart (`cart`)
-- Loyalty account (`loyaltyAccount`)
-- Laravel routes (`ziggy`)
+- Popular products for search (`defaultSearchProducts`)
 - Categories (`categories`)
+- Info banners (`infoBanner`) - conditional
+- Workspace members (`workspaceMembers`) - conditional on workspace routes
+- Teams for invitations (`invitableTeams`) - conditional on workspace routes
 
-**Advantage**: Essential data available everywhere without duplication
+<Callout type="info">
+  **Note:** The project uses [Laravel Wayfinder](https://github.com/laravel/wayfinder) for frontend route generation, replacing the former Ziggy dependency.
+</Callout>
+
+**Advantages**:
+- ✅ Essential data available everywhere without duplication
+- ✅ Separation of concerns via services
+- ✅ Stratified caching (indefinite for static data, 30-60s for dynamic data)
+- ✅ Testable and reusable services
+
+See [HandleInertiaRequests](/handle-inertia-requests) for more details.
 
 ### TypeScript and strong typing
 

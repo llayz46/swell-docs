@@ -314,16 +314,34 @@ Swell implémente des stratégies de cache pour optimiser les performances :
 
 ### Inertia.js et props partagés
 
-Toutes les pages Inertia reçoivent automatiquement des props via `HandleInertiaRequests` :
+Toutes les pages Inertia reçoivent automatiquement des props via `HandleInertiaRequests`, qui délègue maintenant la logique à des **services dédiés** :
 
+**Services utilisés** :
+- **SharedPropsService** : Orchestration principale des shared props
+- **CategoryCacheService** : Gestion du cache des catégories
+- **WorkspaceService** : Gestion des équipes utilisateur
+
+**Props disponibles** :
 - Configuration globale (`swell.*`)
-- Utilisateur authentifié (`auth.user`)
+- Utilisateur authentifié et ses équipes (`auth.user`, `auth.teams`)
 - Panier actuel (`cart`)
-- Compte de fidélité (`loyaltyAccount`)
-- Routes Laravel (`ziggy`)
+- Produits populaires pour la recherche (`defaultSearchProducts`)
 - Catégories (`categories`)
+- Bannières d'information (`infoBanner`) - conditionnel
+- Membres du workspace (`workspaceMembers`) - conditionnel sur routes workspace
+- Équipes pour invitations (`invitableTeams`) - conditionnel sur routes workspace
 
-**Avantage** : Données essentielles disponibles partout sans duplication
+<Callout type="info">
+  **Note :** Le projet utilise [Laravel Wayfinder](https://github.com/laravel/wayfinder) pour la génération de routes côté frontend, remplaçant l'ancienne dépendance Ziggy.
+</Callout>
+
+**Avantages** :
+- ✅ Données essentielles disponibles partout sans duplication
+- ✅ Séparation des responsabilités via services
+- ✅ Cache stratifié (indéfini pour données statiques, 30-60s pour données dynamiques)
+- ✅ Services testables et réutilisables
+
+Voir [HandleInertiaRequests](/handle-inertia-requests) pour plus de détails.
 
 ### TypeScript et typage fort
 
